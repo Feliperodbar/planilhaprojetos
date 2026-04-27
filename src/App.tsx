@@ -2,11 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { SortConfig, SortKey } from "./components/Table";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { TaskManagerPage } from "./pages/TaskManagerPage";
-import type {
-  ProjectTask,
-  ProjectTaskInput,
-  TaskStatus,
-} from "./types/project";
+import type { ProjectTask, ProjectTaskInput } from "./types/project";
 
 const STORAGE_KEY = "project_tasks";
 const ITEMS_PER_PAGE = 8;
@@ -120,7 +116,10 @@ function App() {
         task.solicitante,
         filters.solicitante,
       );
-      const matchesProjeto = matchesSelectedValues(task.projeto, filters.projeto);
+      const matchesProjeto = matchesSelectedValues(
+        task.projeto,
+        filters.projeto,
+      );
       const matchesAtividade = matchesSelectedValues(
         task.atividade,
         filters.atividade,
