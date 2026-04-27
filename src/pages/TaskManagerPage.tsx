@@ -196,9 +196,11 @@ export function TaskManagerPage({
             Filtros
             {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
           </button>
-          <p className="text-sm text-gray-600">
-            Página {currentPage} de {totalPages}
-          </p>
+          {totalPages > 1 && (
+            <p className="text-sm text-gray-600">
+              Página {currentPage} de {totalPages}
+            </p>
+          )}
         </div>
       </nav>
 
@@ -269,24 +271,26 @@ export function TaskManagerPage({
         onDelete={onDelete}
       />
 
-      <div className="mt-4 flex items-center justify-between">
-        <button
-          type="button"
-          onClick={onPrevPage}
-          className="rounded-lg border border-emerald-200 bg-white px-4 py-2 text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={currentPage <= 1}
-        >
-          Anterior
-        </button>
-        <button
-          type="button"
-          onClick={onNextPage}
-          className="rounded-lg border border-emerald-200 bg-white px-4 py-2 text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={currentPage >= totalPages}
-        >
-          Próxima
-        </button>
-      </div>
+      {totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between">
+          <button
+            type="button"
+            onClick={onPrevPage}
+            className="rounded-lg border border-emerald-200 bg-white px-4 py-2 text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={currentPage <= 1}
+          >
+            Anterior
+          </button>
+          <button
+            type="button"
+            onClick={onNextPage}
+            className="rounded-lg border border-emerald-200 bg-white px-4 py-2 text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+            disabled={currentPage >= totalPages}
+          >
+            Próxima
+          </button>
+        </div>
+      )}
 
       {toast && (
         <div

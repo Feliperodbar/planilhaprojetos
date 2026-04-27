@@ -34,6 +34,7 @@ function formatDate(value: string) {
 
 export function TableRow({ task, onEdit, onDelete }: TableRowProps) {
   const today = new Date().toISOString().slice(0, 10);
+  const cellClassName = "border-b border-gray-200 px-3 py-2";
 
   // Regra: se a data prevista já passou e a tarefa não foi concluída,
   // destacamos a linha inteira em vermelho para sinalizar atraso.
@@ -44,38 +45,40 @@ export function TableRow({ task, onEdit, onDelete }: TableRowProps) {
 
   return (
     <tr className={isLate ? "bg-red-100" : "bg-white"}>
-      <td className="px-3 py-2">{task.id}</td>
-      <td className="px-3 py-2 truncate" title={task.solicitante}>
+      <td className={cellClassName}>{task.id}</td>
+      <td className={`${cellClassName} truncate`} title={task.solicitante}>
         {task.solicitante || "-"}
       </td>
-      <td className="px-3 py-2 truncate" title={task.projeto}>
+      <td className={`${cellClassName} truncate`} title={task.projeto}>
         {task.projeto}
       </td>
-      <td className="px-3 py-2 truncate" title={task.atividade}>
+      <td className={`${cellClassName} truncate`} title={task.atividade}>
         {task.atividade}
       </td>
-      <td className="px-3 py-2 truncate" title={task.descricao}>
+      <td className={`${cellClassName} truncate`} title={task.descricao}>
         {task.descricao || "-"}
       </td>
-      <td className="px-3 py-2 truncate" title={task.responsavel}>
+      <td className={`${cellClassName} truncate`} title={task.responsavel}>
         {task.responsavel}
       </td>
-      <td className="px-3 py-2 whitespace-nowrap">
+      <td className={`${cellClassName} whitespace-nowrap`}>
         {formatDate(task.dataInicioPrevisto)}
       </td>
-      <td className="px-3 py-2 whitespace-nowrap">
+      <td className={`${cellClassName} whitespace-nowrap`}>
         {formatDate(task.dataTerminoPrevisto)}
       </td>
-      <td className="px-3 py-2 whitespace-nowrap">
+      <td className={`${cellClassName} whitespace-nowrap`}>
         {formatDate(task.dataInicioReal)}
       </td>
-      <td className="px-3 py-2 whitespace-nowrap">
+      <td className={`${cellClassName} whitespace-nowrap`}>
         {formatDate(task.dataTerminoReal)}
       </td>
-      <td className={`px-3 py-2 font-semibold ${getStatusClasses(task.status)}`}>
+      <td
+        className={`${cellClassName} font-semibold ${getStatusClasses(task.status)}`}
+      >
         {task.status}
       </td>
-      <td className="px-3 py-2">
+      <td className={cellClassName}>
         <div className="flex flex-col gap-1 xl:flex-row">
           <button
             type="button"
