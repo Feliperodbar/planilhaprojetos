@@ -74,6 +74,28 @@ function hasActiveFilter(filters: FilterState, field: FilterField) {
   return filters[field].length > 0;
 }
 
+function getCellTextLength(value: string | number | Date | null | undefined) {
+  if (value === null || value === undefined) {
+    return 0;
+  }
+
+  if (value instanceof Date) {
+    return 10;
+  }
+
+  return String(value).length;
+}
+
+function getColumnWidth(
+  values: Array<string | number | Date | null | undefined>,
+) {
+  const longestText = values.reduce<number>((max, value) => {
+    return Math.max(max, getCellTextLength(value));
+  }, 0);
+
+  return Math.min(Math.max(longestText + 2, 10), 55);
+}
+
 function App() {
   const [tasks, setTasks] = useLocalStorage<ProjectTask[]>(STORAGE_KEY, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -345,12 +367,33 @@ function App() {
       task.status,
     ]);
 
+    const columnWidths = headers.map((header, columnIndex) => {
+      const values = [header, ...rows.map((row) => row[columnIndex])];
+
+      if (columnIndex === 4) {
+        return Math.min(
+          Math.max(
+            values.reduce<number>((max, value) => {
+              return Math.max(max, getCellTextLength(value));
+            }, 0) + 4,
+            26,
+          ),
+          55,
+        );
+      }
+
+      if (columnIndex >= 6 && columnIndex <= 9) {
+        return 16;
+      }
+
+      return getColumnWidth(values);
+    });
+
     const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Atividades");
 
-    const colWidths = [8, 18, 18, 22, 28, 18, 18, 18, 18, 18, 16];
-    ws["!cols"] = colWidths.map((width) => ({ wch: width }));
+    ws["!cols"] = columnWidths.map((width) => ({ wch: width }));
     ws["!autofilter"] = { ref: ws["!ref"] ?? "A1:K1" };
 
     const activeFilterColumns = new Set<number>();
@@ -401,6 +444,8 @@ function App() {
     }
 
     for (let row = range.s.r + 1; row <= range.e.r; row++) {
+      let rowHeight = 20;
+
       for (let col = range.s.c; col <= range.e.c; col++) {
         const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
         if (ws[cellRef]) {
@@ -418,8 +463,23 @@ function App() {
           if (isDateColumn && typeof ws[cellRef].v === "number") {
             ws[cellRef].z = "dd/mm/yyyy";
           }
+
+          if (col === 4) {
+            const descriptionLength = getCellTextLength(ws[cellRef].v);
+            const estimatedLines = Math.max(
+              1,
+              Math.ceil(descriptionLength / 28),
+            );
+            rowHeight = Math.max(rowHeight, 18 * estimatedLines);
+          }
         }
       }
+
+      if (!ws["!rows"]) {
+        ws["!rows"] = [];
+      }
+
+      ws["!rows"][row] = { hpt: Math.min(rowHeight, 120) };
     }
 
     XLSX.writeFile(wb, "atividades_projeto.xlsx");
