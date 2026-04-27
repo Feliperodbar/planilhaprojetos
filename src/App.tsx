@@ -46,6 +46,7 @@ function App() {
   const [tasks, setTasks] = useLocalStorage<ProjectTask[]>(STORAGE_KEY, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<ProjectTask | null>(null);
+  const [showInlineForm, setShowInlineForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"Todos" | TaskStatus>(
     "Todos",
   );
@@ -152,7 +153,7 @@ function App() {
 
   const handleCreate = () => {
     setTaskToEdit(null);
-    setIsModalOpen(true);
+    setShowInlineForm(true);
   };
 
   const handleEdit = (task: ProjectTask) => {
@@ -199,6 +200,7 @@ function App() {
     }
 
     setIsModalOpen(false);
+    setShowInlineForm(false);
     setTaskToEdit(null);
   };
 
@@ -262,6 +264,7 @@ function App() {
       tasks={paginatedTasks}
       taskToEdit={taskToEdit}
       isModalOpen={isModalOpen}
+      showInlineForm={showInlineForm}
       statusFilter={statusFilter}
       responsavelFilter={responsavelFilter}
       sortConfig={sortConfig}
@@ -283,6 +286,8 @@ function App() {
         setTaskToEdit(null);
       }}
       onModalSave={handleSave}
+      onInlineCancel={() => setShowInlineForm(false)}
+      onInlineSave={handleSave}
       onPrevPage={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
       onNextPage={() =>
         setCurrentPage((previous) => Math.min(totalPages, previous + 1))

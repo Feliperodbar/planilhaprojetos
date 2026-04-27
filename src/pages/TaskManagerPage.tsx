@@ -1,4 +1,4 @@
-import { FormModal } from "../components/FormModal";
+import { FormModal, FormInline } from "../components/FormModal";
 import { Table } from "../components/Table";
 import type { SortConfig, SortKey } from "../components/Table";
 import type { ProjectTask, TaskStatus } from "../types/project";
@@ -31,6 +31,9 @@ interface TaskManagerPageProps {
   onDelete: (task: ProjectTask) => void;
   onModalClose: () => void;
   onModalSave: (task: Omit<ProjectTask, "id">) => void;
+  showInlineForm: boolean;
+  onInlineCancel: () => void;
+  onInlineSave: (task: Omit<ProjectTask, "id">) => void;
   onPrevPage: () => void;
   onNextPage: () => void;
 }
@@ -64,6 +67,9 @@ export function TaskManagerPage({
   onDelete,
   onModalClose,
   onModalSave,
+  showInlineForm,
+  onInlineCancel,
+  onInlineSave,
   onPrevPage,
   onNextPage,
 }: TaskManagerPageProps) {
@@ -148,6 +154,17 @@ export function TaskManagerPage({
           </p>
         </div>
       </section>
+
+      {showInlineForm && (
+        <FormInline
+          taskToEdit={taskToEdit}
+          solicitanteOptions={solicitanteOptions}
+          projetoOptions={projetoOptions}
+          responsavelOptions={responsavelOptions}
+          onCancel={onInlineCancel}
+          onSave={onInlineSave}
+        />
+      )}
 
       <Table
         tasks={tasks}

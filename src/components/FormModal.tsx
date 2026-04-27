@@ -383,3 +383,183 @@ export function FormModal({
     </div>
   );
 }
+
+interface FormInlineProps {
+  taskToEdit: ProjectTask | null;
+  solicitanteOptions: string[];
+  projetoOptions: string[];
+  responsavelOptions: string[];
+  onCancel: () => void;
+  onSave: (task: ProjectTaskInput) => void;
+}
+
+export function FormInline({
+  taskToEdit,
+  solicitanteOptions,
+  projetoOptions,
+  responsavelOptions,
+  onCancel,
+  onSave,
+}: FormInlineProps) {
+  const [formData, setFormData] = useState<ProjectTaskInput>(initialFormData);
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  useEffect(() => {
+    if (taskToEdit) {
+      const { id: _, ...taskWithoutId } = taskToEdit;
+      setFormData(taskWithoutId);
+      setErrors({});
+      return;
+    }
+
+    setFormData(initialFormData);
+    setErrors({});
+  }, [taskToEdit]);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const nextErrors: FormErrors = {};
+
+    if (!formData.projeto.trim()) {
+      nextErrors.projeto = "Projeto é obrigatório.";
+    }
+
+    if (!formData.atividade.trim()) {
+      nextErrors.atividade = "Atividade é obrigatória.";
+    }
+
+    if (!formData.responsavel.trim()) {
+      nextErrors.responsavel = "Responsável é obrigatório.";
+    }
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors);
+      return;
+    }
+
+    onSave({
+      ...formData,
+      solicitante: formData.solicitante.trim(),
+      projeto: formData.projeto.trim(),
+      atividade: formData.atividade.trim(),
+      descricao: formData.descricao.trim(),
+      responsavel: formData.responsavel.trim(),
+    });
+  };
+
+  return (
+    <div className="mb-4 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+      <h2 className="mb-3 text-lg font-semibold text-gray-800">{taskToEdit ? "Editar atividade" : "Nova atividade"}</h2>
+      <form className="grid grid-cols-1 gap-4 md:grid-cols-2" onSubmit={handleSubmit}>
+        <SelectWithNew
+          label="Solicitante"
+          value={formData.solicitante}
+          onChange={(value) => setFormData((prev) => ({ ...prev, solicitante: value }))}
+          options={solicitanteOptions}
+        />
+
+        <SelectWithNew
+          label="Projeto *"
+          value={formData.projeto}
+          onChange={(value) => setFormData((prev) => ({ ...prev, projeto: value }))}
+          options={projetoOptions}
+          required
+          error={errors.projeto}
+        />
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Atividade *</label>
+          <input
+            type="text"
+            value={formData.atividade}
+            onChange={(event) => setFormData((prev) => ({ ...prev, atividade: event.target.value }))}
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+            placeholder="Informe a atividade"
+          />
+          {errors.atividade && <p className="mt-1 text-sm text-red-600">{errors.atividade}</p>}
+        </div>
+
+        <SelectWithNew
+          label="Responsável *"
+          value={formData.responsavel}
+          onChange={(value) => setFormData((prev) => ({ ...prev, responsavel: value }))}
+          options={responsavelOptions}
+          required
+          error={errors.responsavel}
+        />
+
+        <div className="md:col-span-2">
+          <label className="mb-1 block text-sm font-medium text-gray-700">Descrição</label>
+          <textarea
+            rows={3}
+            value={formData.descricao}
+            onChange={(event) => setFormData((prev) => ({ ...prev, descricao: event.target.value }))}
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+            placeholder="Detalhes da atividade"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Data início previsto</label>
+          <input
+            type="date"
+            value={formData.dataInicioPrevisto}
+            onChange={(event) => setFormData((prev) => ({ ...prev, dataInicioPrevisto: event.target.value }))}
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Data término previsto</label>
+          <input
+            type="date"
+            value={formData.dataTerminoPrevisto}
+            onChange={(event) => setFormData((prev) => ({ ...prev, dataTerminoPrevisto: event.target.value }))}
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Data início real</label>
+          <input
+            type="date"
+            value={formData.dataInicioReal}
+            onChange={(event) => setFormData((prev) => ({ ...prev, dataInicioReal: event.target.value }))}
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Data término real</label>
+          <input
+            type="date"
+            value={formData.dataTerminoReal}
+            onChange={(event) => setFormData((prev) => ({ ...prev, dataTerminoReal: event.target.value }))}
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+          />
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-gray-700">Status</label>
+          <select
+            value={formData.status}
+            onChange={(event) => setFormData((prev) => ({ ...prev, status: event.target.value as TaskStatus }))}
+            className="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+          >
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="md:col-span-2 flex justify-end gap-2 pt-2">
+          <button type="button" onClick={onCancel} className="rounded border border-gray-300 px-4 py-2 hover:bg-gray-100">Cancelar</button>
+          <button type="submit" className="rounded bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700">Salvar</button>
+        </div>
+      </form>
+    </div>
+  );
+}
