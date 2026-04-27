@@ -161,10 +161,6 @@ export function TaskManagerPage({
             <h1 className="text-2xl font-bold text-gray-800">
               Gestão de Atividades
             </h1>
-            <p className="text-sm text-gray-600">
-              Controle tarefas por projeto com filtros, ordenação, paginação e
-              persistência local.
-            </p>
           </div>
         </div>
       </header>
