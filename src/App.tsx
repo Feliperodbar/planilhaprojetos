@@ -11,6 +11,19 @@ import type {
 const STORAGE_KEY = "project_tasks";
 const ITEMS_PER_PAGE = 8;
 
+const filterFields = [
+  "solicitante",
+  "projeto",
+  "atividade",
+  "descricao",
+  "responsavel",
+  "status",
+] as const;
+
+type FilterField = (typeof filterFields)[number];
+
+type FilterState = Record<FilterField, string[]>;
+
 interface ToastState {
   type: "success" | "error";
   message: string;
@@ -42,15 +55,28 @@ function escapeCsvValue(value: string | number) {
   return `"${formatted}"`;
 }
 
+function matchesSelectedValues(value: string, selectedValues: string[]) {
+  if (selectedValues.length === 0) {
+    return true;
+  }
+
+  return selectedValues.includes(value);
+}
+
 function App() {
   const [tasks, setTasks] = useLocalStorage<ProjectTask[]>(STORAGE_KEY, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<ProjectTask | null>(null);
   const [showInlineForm, setShowInlineForm] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<"Todos" | TaskStatus>(
-    "Todos",
-  );
-  const [responsavelFilter, setResponsavelFilter] = useState("Todos");
+  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [filters, setFilters] = useState<FilterState>({
+    solicitante: [],
+    projeto: [],
+    atividade: [],
+    descricao: [],
+    responsavel: [],
+    status: [],
+  });
   const [sortConfig, setSortConfig] = useState<SortConfig>(defaultSortConfig);
   const [currentPage, setCurrentPage] = useState(1);
   const [toast, setToast] = useState<ToastState | null>(null);
@@ -70,14 +96,53 @@ function App() {
     [tasks],
   );
 
+  const activityOptions = useMemo(
+    () => [...new Set(tasks.map((task) => task.atividade).filter(Boolean))],
+    [tasks],
+  );
+
+  const descricaoOptions = useMemo(
+    () => [...new Set(tasks.map((task) => task.descricao).filter(Boolean))],
+    [tasks],
+  );
+
+  const activeFilterCount = filterFields.reduce((count, field) => {
+    if (filters[field].length > 0) {
+      return count + 1;
+    }
+
+    return count;
+  }, 0);
+
   const filteredAndSortedTasks = useMemo(() => {
     const filtered = tasks.filter((task) => {
-      const matchesStatus =
-        statusFilter === "Todos" || task.status === statusFilter;
-      const matchesResponsavel =
-        responsavelFilter === "Todos" || task.responsavel === responsavelFilter;
+      const matchesSolicitante = matchesSelectedValues(
+        task.solicitante,
+        filters.solicitante,
+      );
+      const matchesProjeto = matchesSelectedValues(task.projeto, filters.projeto);
+      const matchesAtividade = matchesSelectedValues(
+        task.atividade,
+        filters.atividade,
+      );
+      const matchesDescricao = matchesSelectedValues(
+        task.descricao,
+        filters.descricao,
+      );
+      const matchesResponsavel = matchesSelectedValues(
+        task.responsavel,
+        filters.responsavel,
+      );
+      const matchesStatus = matchesSelectedValues(task.status, filters.status);
 
-      return matchesStatus && matchesResponsavel;
+      return (
+        matchesSolicitante &&
+        matchesProjeto &&
+        matchesAtividade &&
+        matchesDescricao &&
+        matchesResponsavel &&
+        matchesStatus
+      );
     });
 
     const sorted = [...filtered].sort((a, b) => {
@@ -96,7 +161,7 @@ function App() {
     });
 
     return sorted;
-  }, [tasks, statusFilter, responsavelFilter, sortConfig]);
+  }, [tasks, filters, sortConfig]);
 
   const totalPages = Math.max(
     1,
@@ -110,7 +175,7 @@ function App() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, responsavelFilter]);
+  }, [filters]);
 
   useEffect(() => {
     if (currentPage > totalPages) {
@@ -154,6 +219,31 @@ function App() {
   const handleCreate = () => {
     setTaskToEdit(null);
     setShowInlineForm(true);
+  };
+
+  const handleToggleFilter = (field: FilterField, value: string) => {
+    setFilters((previous) => {
+      const currentValues = previous[field];
+      const nextValues = currentValues.includes(value)
+        ? currentValues.filter((item) => item !== value)
+        : [...currentValues, value];
+
+      return {
+        ...previous,
+        [field]: nextValues,
+      };
+    });
+  };
+
+  const handleClearFilters = () => {
+    setFilters({
+      solicitante: [],
+      projeto: [],
+      atividade: [],
+      descricao: [],
+      responsavel: [],
+      status: [],
+    });
   };
 
   const handleEdit = (task: ProjectTask) => {
@@ -265,17 +355,21 @@ function App() {
       taskToEdit={taskToEdit}
       isModalOpen={isModalOpen}
       showInlineForm={showInlineForm}
-      statusFilter={statusFilter}
-      responsavelFilter={responsavelFilter}
+      isFiltersOpen={isFiltersOpen}
+      activeFilterCount={activeFilterCount}
+      filters={filters}
       sortConfig={sortConfig}
       currentPage={currentPage}
       totalPages={totalPages}
       solicitanteOptions={solicitanteOptions}
       projetoOptions={projetoOptions}
+      activityOptions={activityOptions}
+      descricaoOptions={descricaoOptions}
       responsavelOptions={responsavelOptions}
       toast={toast}
-      onStatusFilterChange={setStatusFilter}
-      onResponsavelFilterChange={setResponsavelFilter}
+      onToggleFilters={() => setIsFiltersOpen((previous) => !previous)}
+      onToggleFilter={handleToggleFilter}
+      onClearFilters={handleClearFilters}
       onSort={handleSort}
       onCreate={handleCreate}
       onExportCsv={handleExportCsv}
