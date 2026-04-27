@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import type { SortConfig, SortKey } from "./components/Table";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { TaskManagerPage } from "./pages/TaskManagerPage";
@@ -53,6 +53,25 @@ function matchesSelectedValues(value: string, selectedValues: string[]) {
   }
 
   return selectedValues.includes(value);
+}
+
+function toExcelDate(value: string) {
+  if (!value) {
+    return "";
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) {
+    return value;
+  }
+
+  const excelEpoch = Date.UTC(1899, 11, 30);
+  const dateUtc = Date.UTC(year, month - 1, day);
+  return (dateUtc - excelEpoch) / 86400000;
+}
+
+function hasActiveFilter(filters: FilterState, field: FilterField) {
+  return filters[field].length > 0;
 }
 
 function App() {
@@ -312,69 +331,93 @@ function App() {
       "Status",
     ];
 
-    const data = filteredAndSortedTasks.map((task) => ({
-      ID: task.id,
-      Solicitante: task.solicitante,
-      Projeto: task.projeto,
-      Atividade: task.atividade,
-      Descrição: task.descricao,
-      Responsável: task.responsavel,
-      "Data início previsto": task.dataInicioPrevisto,
-      "Data término previsto": task.dataTerminoPrevisto,
-      "Data início real": task.dataInicioReal,
-      "Data término real": task.dataTerminoReal,
-      Status: task.status,
-    }));
+    const rows = filteredAndSortedTasks.map((task) => [
+      task.id,
+      task.solicitante,
+      task.projeto,
+      task.atividade,
+      task.descricao,
+      task.responsavel,
+      toExcelDate(task.dataInicioPrevisto),
+      toExcelDate(task.dataTerminoPrevisto),
+      toExcelDate(task.dataInicioReal),
+      toExcelDate(task.dataTerminoReal),
+      task.status,
+    ]);
 
-    const ws = XLSX.utils.json_to_sheet(data);
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Atividades");
 
-    // Configurar largura das colunas
-    const colWidths = [8, 15, 15, 20, 25, 15, 18, 18, 18, 18, 12];
+    const colWidths = [8, 18, 18, 22, 28, 18, 18, 18, 18, 18, 16];
     ws["!cols"] = colWidths.map((width) => ({ wch: width }));
+    ws["!autofilter"] = { ref: ws["!ref"] ?? "A1:K1" };
 
-    // Estilizar cabeçalhos
-    headers.forEach((_, colIndex) => {
-      const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIndex });
-      if (ws[cellRef]) {
-        ws[cellRef].s = {
-          font: { bold: true, color: { rgb: "FFFFFF" } },
-          fill: { fgColor: { rgb: "10B981" } },
-          alignment: {
-            horizontal: "center",
-            vertical: "center",
-            wrapText: true,
-          },
-          border: {
-            top: { style: "thin", color: { rgb: "000000" } },
-            bottom: { style: "thin", color: { rgb: "000000" } },
-            left: { style: "thin", color: { rgb: "000000" } },
-            right: { style: "thin", color: { rgb: "000000" } },
-          },
-        };
+    const activeFilterColumns = new Set<number>();
+    filterFields.forEach((field, index) => {
+      if (hasActiveFilter(filters, field)) {
+        activeFilterColumns.add(index + 1);
       }
     });
 
-    // Aplicar bordas e alinhamento ao restante das células
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "0F766E" } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+      border: {
+        top: { style: "thin", color: { rgb: "0F172A" } },
+        bottom: { style: "thin", color: { rgb: "0F172A" } },
+        left: { style: "thin", color: { rgb: "0F172A" } },
+        right: { style: "thin", color: { rgb: "0F172A" } },
+      },
+    };
+
+    const baseCellStyle = {
+      alignment: { vertical: "center", wrapText: true },
+      border: {
+        top: { style: "thin", color: { rgb: "D1D5DB" } },
+        bottom: { style: "thin", color: { rgb: "D1D5DB" } },
+        left: { style: "thin", color: { rgb: "D1D5DB" } },
+        right: { style: "thin", color: { rgb: "D1D5DB" } },
+      },
+    };
+
+    const highlightedCellStyle = {
+      ...baseCellStyle,
+      fill: { fgColor: { rgb: "DCFCE7" } },
+    };
+
     const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
+    for (let col = range.s.c; col <= range.e.c; col++) {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: col });
+      if (ws[cellRef]) {
+        ws[cellRef].s = {
+          ...headerStyle,
+          fill: activeFilterColumns.has(col)
+            ? { fgColor: { rgb: "065F46" } }
+            : headerStyle.fill,
+        };
+      }
+    }
+
     for (let row = range.s.r + 1; row <= range.e.r; row++) {
       for (let col = range.s.c; col <= range.e.c; col++) {
         const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
         if (ws[cellRef]) {
+          const isDateColumn = col >= 6 && col <= 9;
+          const isFilteredColumn = activeFilterColumns.has(col);
           ws[cellRef].s = {
+            ...(isFilteredColumn ? highlightedCellStyle : baseCellStyle),
             alignment: {
-              horizontal: "left",
+              horizontal: isDateColumn ? "center" : "left",
               vertical: "center",
               wrapText: true,
             },
-            border: {
-              top: { style: "thin", color: { rgb: "E5E7EB" } },
-              bottom: { style: "thin", color: { rgb: "E5E7EB" } },
-              left: { style: "thin", color: { rgb: "E5E7EB" } },
-              right: { style: "thin", color: { rgb: "E5E7EB" } },
-            },
           };
+
+          if (isDateColumn && typeof ws[cellRef].v === "number") {
+            ws[cellRef].z = "dd/mm/yyyy";
+          }
         }
       }
     }
