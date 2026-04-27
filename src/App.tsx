@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import * as XLSX from "xlsx";
 import type { SortConfig, SortKey } from "./components/Table";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { TaskManagerPage } from "./pages/TaskManagerPage";
@@ -44,11 +45,6 @@ function normalizeForSort(value: string | number) {
   }
 
   return value.toString().toLocaleLowerCase("pt-BR");
-}
-
-function escapeCsvValue(value: string | number) {
-  const formatted = String(value ?? "").replaceAll('"', '""');
-  return `"${formatted}"`;
 }
 
 function matchesSelectedValues(value: string, selectedValues: string[]) {
@@ -316,36 +312,76 @@ function App() {
       "Status",
     ];
 
-    const rows = filteredAndSortedTasks.map((task) => [
-      task.id,
-      task.solicitante,
-      task.projeto,
-      task.atividade,
-      task.descricao,
-      task.responsavel,
-      task.dataInicioPrevisto,
-      task.dataTerminoPrevisto,
-      task.dataInicioReal,
-      task.dataTerminoReal,
-      task.status,
-    ]);
+    const data = filteredAndSortedTasks.map((task) => ({
+      ID: task.id,
+      Solicitante: task.solicitante,
+      Projeto: task.projeto,
+      Atividade: task.atividade,
+      Descrição: task.descricao,
+      Responsável: task.responsavel,
+      "Data início previsto": task.dataInicioPrevisto,
+      "Data término previsto": task.dataTerminoPrevisto,
+      "Data início real": task.dataInicioReal,
+      "Data término real": task.dataTerminoReal,
+      Status: task.status,
+    }));
 
-    const csvContent = [
-      headers.map((header) => escapeCsvValue(header)).join(","),
-      ...rows.map((row) => row.map((cell) => escapeCsvValue(cell)).join(",")),
-    ].join("\n");
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Atividades");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
+    // Configurar largura das colunas
+    const colWidths = [8, 15, 15, 20, 25, 15, 18, 18, 18, 18, 12];
+    ws["!cols"] = colWidths.map((width) => ({ wch: width }));
 
-    link.href = url;
-    link.download = "atividades_projeto.csv";
-    link.click();
+    // Estilizar cabeçalhos
+    headers.forEach((_, colIndex) => {
+      const cellRef = XLSX.utils.encode_cell({ r: 0, c: colIndex });
+      if (ws[cellRef]) {
+        ws[cellRef].s = {
+          font: { bold: true, color: { rgb: "FFFFFF" } },
+          fill: { fgColor: { rgb: "10B981" } },
+          alignment: {
+            horizontal: "center",
+            vertical: "center",
+            wrapText: true,
+          },
+          border: {
+            top: { style: "thin", color: { rgb: "000000" } },
+            bottom: { style: "thin", color: { rgb: "000000" } },
+            left: { style: "thin", color: { rgb: "000000" } },
+            right: { style: "thin", color: { rgb: "000000" } },
+          },
+        };
+      }
+    });
 
-    window.URL.revokeObjectURL(url);
+    // Aplicar bordas e alinhamento ao restante das células
+    const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
+    for (let row = range.s.r + 1; row <= range.e.r; row++) {
+      for (let col = range.s.c; col <= range.e.c; col++) {
+        const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
+        if (ws[cellRef]) {
+          ws[cellRef].s = {
+            alignment: {
+              horizontal: "left",
+              vertical: "center",
+              wrapText: true,
+            },
+            border: {
+              top: { style: "thin", color: { rgb: "E5E7EB" } },
+              bottom: { style: "thin", color: { rgb: "E5E7EB" } },
+              left: { style: "thin", color: { rgb: "E5E7EB" } },
+              right: { style: "thin", color: { rgb: "E5E7EB" } },
+            },
+          };
+        }
+      }
+    }
 
-    setToast({ type: "success", message: "CSV exportado com sucesso." });
+    XLSX.writeFile(wb, "atividades_projeto.xlsx");
+
+    setToast({ type: "success", message: "Excel exportado com sucesso." });
   };
 
   return (

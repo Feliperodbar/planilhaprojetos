@@ -7,7 +7,7 @@ Projeto com controle de tarefas de projetos, incluindo:
 - Filtros por status e responsável
 - Ordenação por colunas
 - Paginação simples
-- Exportação para CSV
+- Exportação para Excel com formatação
 - Destaque visual por status e atraso
 
 ## Como rodar
