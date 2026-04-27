@@ -21,19 +21,6 @@ const defaultSortConfig: SortConfig = {
   direction: "asc",
 };
 
-const initialTaskInput: ProjectTaskInput = {
-  solicitante: "",
-  projeto: "",
-  atividade: "",
-  descricao: "",
-  responsavel: "",
-  dataInicioPrevisto: "",
-  dataTerminoPrevisto: "",
-  dataInicioReal: "",
-  dataTerminoReal: "",
-  status: "Não iniciado",
-};
-
 function getNextId(tasks: ProjectTask[]) {
   if (tasks.length === 0) {
     return 1;
@@ -59,13 +46,7 @@ function App() {
   const [tasks, setTasks] = useLocalStorage<ProjectTask[]>(STORAGE_KEY, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<ProjectTask | null>(null);
-  const [isCreatingInline, setIsCreatingInline] = useState(false);
-  const [newTaskDraft, setNewTaskDraft] = useState<ProjectTaskInput>(initialTaskInput);
-  const [newTaskErrors, setNewTaskErrors] = useState<{
-    projeto?: string;
-    atividade?: string;
-    responsavel?: string;
-  }>({});
+  const [showInlineForm, setShowInlineForm] = useState(false);
   const [statusFilter, setStatusFilter] = useState<"Todos" | TaskStatus>(
     "Todos",
   );
@@ -172,11 +153,7 @@ function App() {
 
   const handleCreate = () => {
     setTaskToEdit(null);
-    setIsModalOpen(false);
-    setCurrentPage(1);
-    setIsCreatingInline(true);
-    setNewTaskDraft(initialTaskInput);
-    setNewTaskErrors({});
+    setShowInlineForm(true);
   };
 
   const handleEdit = (task: ProjectTask) => {
@@ -223,63 +200,8 @@ function App() {
     }
 
     setIsModalOpen(false);
-    setIsCreatingInline(false);
+    setShowInlineForm(false);
     setTaskToEdit(null);
-  };
-
-  const handleNewTaskChange = (field: keyof ProjectTaskInput, value: string) => {
-    setNewTaskDraft((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
-
-    if (field === "projeto" || field === "atividade" || field === "responsavel") {
-      setNewTaskErrors((previous) => ({ ...previous, [field]: undefined }));
-    }
-  };
-
-  const handleCreateInlineCancel = () => {
-    setIsCreatingInline(false);
-    setNewTaskDraft(initialTaskInput);
-    setNewTaskErrors({});
-  };
-
-  const handleCreateInlineSave = () => {
-    const nextErrors: {
-      projeto?: string;
-      atividade?: string;
-      responsavel?: string;
-    } = {};
-
-    if (!newTaskDraft.projeto.trim()) {
-      nextErrors.projeto = "Projeto é obrigatório.";
-    }
-
-    if (!newTaskDraft.atividade.trim()) {
-      nextErrors.atividade = "Atividade é obrigatória.";
-    }
-
-    if (!newTaskDraft.responsavel.trim()) {
-      nextErrors.responsavel = "Responsável é obrigatório.";
-    }
-
-    if (Object.keys(nextErrors).length > 0) {
-      setNewTaskErrors(nextErrors);
-      setToast({ type: "error", message: "Preencha os campos obrigatórios." });
-      return;
-    }
-
-    handleSave({
-      ...newTaskDraft,
-      solicitante: newTaskDraft.solicitante.trim(),
-      projeto: newTaskDraft.projeto.trim(),
-      atividade: newTaskDraft.atividade.trim(),
-      descricao: newTaskDraft.descricao.trim(),
-      responsavel: newTaskDraft.responsavel.trim(),
-    });
-
-    setNewTaskDraft(initialTaskInput);
-    setNewTaskErrors({});
   };
 
   const handleExportCsv = () => {
@@ -342,9 +264,7 @@ function App() {
       tasks={paginatedTasks}
       taskToEdit={taskToEdit}
       isModalOpen={isModalOpen}
-      isCreatingInline={isCreatingInline}
-      newTaskDraft={newTaskDraft}
-      newTaskErrors={newTaskErrors}
+      showInlineForm={showInlineForm}
       statusFilter={statusFilter}
       responsavelFilter={responsavelFilter}
       sortConfig={sortConfig}
@@ -361,14 +281,13 @@ function App() {
       onExportCsv={handleExportCsv}
       onEdit={handleEdit}
       onDelete={handleDelete}
-      onNewTaskChange={handleNewTaskChange}
-      onCreateInlineSave={handleCreateInlineSave}
-      onCreateInlineCancel={handleCreateInlineCancel}
       onModalClose={() => {
         setIsModalOpen(false);
         setTaskToEdit(null);
       }}
       onModalSave={handleSave}
+      onInlineCancel={() => setShowInlineForm(false)}
+      onInlineSave={handleSave}
       onPrevPage={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
       onNextPage={() =>
         setCurrentPage((previous) => Math.min(totalPages, previous + 1))
