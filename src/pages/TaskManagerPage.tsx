@@ -1,7 +1,7 @@
-import { FormModal, FormInline } from "../components/FormModal";
+import { FormModal } from "../components/FormModal";
 import { Table } from "../components/Table";
 import type { SortConfig, SortKey } from "../components/Table";
-import type { ProjectTask, TaskStatus } from "../types/project";
+import type { ProjectTask, ProjectTaskInput, TaskStatus } from "../types/project";
 import neoHeaderLogo from "../assets/neoheader.svg";
 
 interface ToastState {
@@ -31,9 +31,16 @@ interface TaskManagerPageProps {
   onDelete: (task: ProjectTask) => void;
   onModalClose: () => void;
   onModalSave: (task: Omit<ProjectTask, "id">) => void;
-  showInlineForm: boolean;
-  onInlineCancel: () => void;
-  onInlineSave: (task: Omit<ProjectTask, "id">) => void;
+  isCreatingInline: boolean;
+  newTaskDraft: ProjectTaskInput;
+  newTaskErrors: {
+    projeto?: string;
+    atividade?: string;
+    responsavel?: string;
+  };
+  onNewTaskChange: (field: keyof ProjectTaskInput, value: string) => void;
+  onCreateInlineSave: () => void;
+  onCreateInlineCancel: () => void;
   onPrevPage: () => void;
   onNextPage: () => void;
 }
@@ -67,9 +74,12 @@ export function TaskManagerPage({
   onDelete,
   onModalClose,
   onModalSave,
-  showInlineForm,
-  onInlineCancel,
-  onInlineSave,
+  isCreatingInline,
+  newTaskDraft,
+  newTaskErrors,
+  onNewTaskChange,
+  onCreateInlineSave,
+  onCreateInlineCancel,
   onPrevPage,
   onNextPage,
 }: TaskManagerPageProps) {
@@ -155,23 +165,18 @@ export function TaskManagerPage({
         </div>
       </section>
 
-      {showInlineForm && (
-        <FormInline
-          taskToEdit={taskToEdit}
-          solicitanteOptions={solicitanteOptions}
-          projetoOptions={projetoOptions}
-          responsavelOptions={responsavelOptions}
-          onCancel={onInlineCancel}
-          onSave={onInlineSave}
-        />
-      )}
-
       <Table
         tasks={tasks}
         sortConfig={sortConfig}
         onSort={onSort}
         onEdit={onEdit}
         onDelete={onDelete}
+        isCreatingInline={isCreatingInline}
+        newTaskDraft={newTaskDraft}
+        newTaskErrors={newTaskErrors}
+        onNewTaskChange={onNewTaskChange}
+        onCreateInlineSave={onCreateInlineSave}
+        onCreateInlineCancel={onCreateInlineCancel}
       />
 
       <div className="mt-4 flex items-center justify-between">
