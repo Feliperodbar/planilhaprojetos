@@ -9,7 +9,6 @@ const STORAGE_KEY = "project_tasks";
 const ITEMS_PER_PAGE = 8;
 
 const filterFields = [
-  "solicitante",
   "projeto",
   "atividade",
   "descricao",
@@ -100,10 +99,8 @@ function App() {
   const [tasks, setTasks] = useLocalStorage<ProjectTask[]>(STORAGE_KEY, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [taskToEdit, setTaskToEdit] = useState<ProjectTask | null>(null);
-  const [showInlineForm, setShowInlineForm] = useState(false);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
-    solicitante: [],
     projeto: [],
     atividade: [],
     descricao: [],
@@ -113,11 +110,6 @@ function App() {
   const [sortConfig, setSortConfig] = useState<SortConfig>(defaultSortConfig);
   const [currentPage, setCurrentPage] = useState(1);
   const [toast, setToast] = useState<ToastState | null>(null);
-
-  const solicitanteOptions = useMemo(
-    () => [...new Set(tasks.map((task) => task.solicitante).filter(Boolean))],
-    [tasks],
-  );
 
   const projetoOptions = useMemo(
     () => [...new Set(tasks.map((task) => task.projeto).filter(Boolean))],
@@ -149,10 +141,6 @@ function App() {
 
   const filteredAndSortedTasks = useMemo(() => {
     const filtered = tasks.filter((task) => {
-      const matchesSolicitante = matchesSelectedValues(
-        task.solicitante,
-        filters.solicitante,
-      );
       const matchesProjeto = matchesSelectedValues(
         task.projeto,
         filters.projeto,
@@ -172,7 +160,6 @@ function App() {
       const matchesStatus = matchesSelectedValues(task.status, filters.status);
 
       return (
-        matchesSolicitante &&
         matchesProjeto &&
         matchesAtividade &&
         matchesDescricao &&
@@ -254,7 +241,7 @@ function App() {
 
   const handleCreate = () => {
     setTaskToEdit(null);
-    setShowInlineForm(true);
+    setIsModalOpen(true);
   };
 
   const handleToggleFilter = (field: FilterField, value: string) => {
@@ -273,7 +260,6 @@ function App() {
 
   const handleClearFilters = () => {
     setFilters({
-      solicitante: [],
       projeto: [],
       atividade: [],
       descricao: [],
@@ -326,7 +312,6 @@ function App() {
     }
 
     setIsModalOpen(false);
-    setShowInlineForm(false);
     setTaskToEdit(null);
   };
 
@@ -341,7 +326,6 @@ function App() {
 
     const headers = [
       "ID",
-      "Solicitante",
       "Projeto",
       "Atividade",
       "Descrição",
@@ -355,7 +339,6 @@ function App() {
 
     const rows = filteredAndSortedTasks.map((task) => [
       task.id,
-      task.solicitante,
       task.projeto,
       task.atividade,
       task.descricao,
@@ -492,14 +475,12 @@ function App() {
       tasks={paginatedTasks}
       taskToEdit={taskToEdit}
       isModalOpen={isModalOpen}
-      showInlineForm={showInlineForm}
       isFiltersOpen={isFiltersOpen}
       activeFilterCount={activeFilterCount}
       filters={filters}
       sortConfig={sortConfig}
       currentPage={currentPage}
       totalPages={totalPages}
-      solicitanteOptions={solicitanteOptions}
       projetoOptions={projetoOptions}
       activityOptions={activityOptions}
       descricaoOptions={descricaoOptions}
@@ -518,8 +499,6 @@ function App() {
         setTaskToEdit(null);
       }}
       onModalSave={handleSave}
-      onInlineCancel={() => setShowInlineForm(false)}
-      onInlineSave={handleSave}
       onPrevPage={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
       onNextPage={() =>
         setCurrentPage((previous) => Math.min(totalPages, previous + 1))

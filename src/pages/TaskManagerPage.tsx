@@ -1,4 +1,4 @@
-import { FormModal, FormInline } from "../components/FormModal";
+import { FormModal } from "../components/FormModal";
 import { Table } from "../components/Table";
 import type { SortConfig, SortKey } from "../components/Table";
 import type { ProjectTask, TaskStatus } from "../types/project";
@@ -10,7 +10,6 @@ interface ToastState {
 }
 
 interface FilterState {
-  solicitante: string[];
   projeto: string[];
   atividade: string[];
   descricao: string[];
@@ -30,7 +29,6 @@ interface TaskManagerPageProps {
   sortConfig: SortConfig;
   currentPage: number;
   totalPages: number;
-  solicitanteOptions: string[];
   projetoOptions: string[];
   activityOptions: string[];
   descricaoOptions: string[];
@@ -46,9 +44,6 @@ interface TaskManagerPageProps {
   onDelete: (task: ProjectTask) => void;
   onModalClose: () => void;
   onModalSave: (task: Omit<ProjectTask, "id">) => void;
-  showInlineForm: boolean;
-  onInlineCancel: () => void;
-  onInlineSave: (task: Omit<ProjectTask, "id">) => void;
   onPrevPage: () => void;
   onNextPage: () => void;
 }
@@ -64,7 +59,6 @@ const filterGroups: Array<{
   label: string;
   options: string[];
 }> = [
-  { field: "solicitante", label: "Solicitante", options: [] },
   { field: "projeto", label: "Projeto", options: [] },
   { field: "atividade", label: "Atividade", options: [] },
   { field: "descricao", label: "Descrição", options: [] },
@@ -126,7 +120,6 @@ export function TaskManagerPage({
   sortConfig,
   currentPage,
   totalPages,
-  solicitanteOptions,
   projetoOptions,
   activityOptions,
   descricaoOptions,
@@ -142,9 +135,6 @@ export function TaskManagerPage({
   onDelete,
   onModalClose,
   onModalSave,
-  showInlineForm,
-  onInlineCancel,
-  onInlineSave,
   onPrevPage,
   onNextPage,
 }: TaskManagerPageProps) {
@@ -221,17 +211,15 @@ export function TaskManagerPage({
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
             {filterGroups.map((group) => {
               const options =
-                group.field === "solicitante"
-                  ? solicitanteOptions
-                  : group.field === "projeto"
-                    ? projetoOptions
-                    : group.field === "atividade"
-                      ? activityOptions
-                      : group.field === "descricao"
-                        ? descricaoOptions
-                        : group.field === "responsavel"
-                          ? responsavelOptions
-                          : group.options;
+                group.field === "projeto"
+                  ? projetoOptions
+                  : group.field === "atividade"
+                    ? activityOptions
+                    : group.field === "descricao"
+                      ? descricaoOptions
+                      : group.field === "responsavel"
+                        ? responsavelOptions
+                        : group.options;
 
               return (
                 <FilterOptionList
@@ -246,17 +234,6 @@ export function TaskManagerPage({
             })}
           </div>
         </section>
-      )}
-
-      {showInlineForm && (
-        <FormInline
-          taskToEdit={taskToEdit}
-          solicitanteOptions={solicitanteOptions}
-          projetoOptions={projetoOptions}
-          responsavelOptions={responsavelOptions}
-          onCancel={onInlineCancel}
-          onSave={onInlineSave}
-        />
       )}
 
       <Table
@@ -301,7 +278,6 @@ export function TaskManagerPage({
       <FormModal
         isOpen={isModalOpen}
         taskToEdit={taskToEdit}
-        solicitanteOptions={solicitanteOptions}
         projetoOptions={projetoOptions}
         responsavelOptions={responsavelOptions}
         onClose={onModalClose}
