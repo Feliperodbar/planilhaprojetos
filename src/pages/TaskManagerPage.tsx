@@ -1,4 +1,5 @@
 import { FormModal } from "../components/FormModal";
+import { MonthlyTimeline } from "../components/MonthlyTimeline";
 import { Table } from "../components/Table";
 import type { SortConfig, SortKey } from "../components/Table";
 import type { ProjectTask, TaskStatus } from "../types/project";
@@ -235,6 +236,8 @@ export function TaskManagerPage({
           </div>
         </section>
       )}
+
+      <MonthlyTimeline tasks={tasks} />
 
       <Table
         tasks={tasks}
