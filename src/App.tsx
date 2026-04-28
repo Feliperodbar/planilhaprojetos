@@ -510,6 +510,14 @@ function App() {
       fill: { fgColor: { rgb: "DCFCE7" } },
     };
 
+    // Map status to colors
+    const statusColorMap: Record<string, string> = {
+      "Não iniciado": "E2E8F0", // Slate
+      "Em andamento": "FEF3C7", // Amber
+      Concluído: "D1FAE5", // Emerald
+      Atrasado: "FEE2E2", // Red
+    };
+
     const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
     for (let col = range.s.c; col <= range.e.c; col++) {
       const cellRef = XLSX.utils.encode_cell({ r: 0, c: col });
@@ -530,9 +538,27 @@ function App() {
         const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
         if (ws[cellRef]) {
           const isDateColumn = col >= 6 && col <= 9;
+          const isStatusColumn = col === 9; // Status is column J (index 9)
           const isFilteredColumn = activeFilterColumns.has(col);
+
+          let cellStyle: any = isFilteredColumn
+            ? highlightedCellStyle
+            : baseCellStyle;
+
+          // Apply status color to Status column
+          if (isStatusColumn && ws[cellRef].v) {
+            const statusValue = ws[cellRef].v as string;
+            const statusColor = statusColorMap[statusValue];
+            if (statusColor) {
+              cellStyle = {
+                ...cellStyle,
+                fill: { fgColor: { rgb: statusColor } },
+              };
+            }
+          }
+
           ws[cellRef].s = {
-            ...(isFilteredColumn ? highlightedCellStyle : baseCellStyle),
+            ...cellStyle,
             alignment: {
               horizontal: "center",
               vertical: "center",
