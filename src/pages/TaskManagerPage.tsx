@@ -171,17 +171,17 @@ export function TaskManagerPage({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={onExport}
-            className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 font-medium text-emerald-800 transition hover:bg-emerald-100"
-          >
-            Exportar
-          </button>
-          <button
-            type="button"
             onClick={onCreate}
             className="rounded-lg bg-emerald-600 px-2 py-1 font-medium text-white transition hover:bg-emerald-700"
           >
             Nova Atividade
+          </button>
+          <button
+            type="button"
+            onClick={onExport}
+            className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 font-medium text-emerald-800 transition hover:bg-emerald-100"
+          >
+            Exportar
           </button>
         </div>
 
