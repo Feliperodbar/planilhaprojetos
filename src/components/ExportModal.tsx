@@ -1,6 +1,7 @@
 interface ExportModalProps {
   isOpen: boolean;
   onExcel: () => void;
+  onCsv: () => void;
   onPDF: () => void;
   onClose: () => void;
 }
@@ -8,6 +9,7 @@ interface ExportModalProps {
 export function ExportModal({
   isOpen,
   onExcel,
+  onCsv,
   onPDF,
   onClose,
 }: ExportModalProps) {
@@ -50,7 +52,31 @@ export function ExportModal({
             </svg>
             <div>
               <p className="font-semibold">Excel (.xlsx)</p>
-              <p className="text-xs text-emerald-700">Planilha formatada</p>
+              <p className="text-xs text-emerald-700">Planilha para análise</p>
+            </div>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              onCsv();
+              onClose();
+            }}
+            className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-left font-medium text-emerald-900 transition hover:bg-emerald-100"
+          >
+            <svg
+              className="h-5 w-5"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+            >
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
+            </svg>
+            <div>
+              <p className="font-semibold">CSV (.csv)</p>
+              <p className="text-xs text-emerald-700">
+                Valores separados por vírgula
+              </p>
             </div>
           </button>
 

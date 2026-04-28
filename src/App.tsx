@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx-js-style";
+import * as XLSX from "xlsx";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { SortConfig, SortKey } from "./components/Table";
@@ -57,47 +57,6 @@ function matchesSelectedValues(value: string, selectedValues: string[]) {
   return selectedValues.includes(value);
 }
 
-function toExcelDate(value: string) {
-  if (!value) {
-    return "";
-  }
-
-  const [year, month, day] = value.split("-").map(Number);
-  if (!year || !month || !day) {
-    return value;
-  }
-
-  const excelEpoch = Date.UTC(1899, 11, 30);
-  const dateUtc = Date.UTC(year, month - 1, day);
-  return (dateUtc - excelEpoch) / 86400000;
-}
-
-function hasActiveFilter(filters: FilterState, field: FilterField) {
-  return filters[field].length > 0;
-}
-
-function getCellTextLength(value: string | number | Date | null | undefined) {
-  if (value === null || value === undefined) {
-    return 0;
-  }
-
-  if (value instanceof Date) {
-    return 10;
-  }
-
-  return String(value).length;
-}
-
-function getColumnWidth(
-  values: Array<string | number | Date | null | undefined>,
-) {
-  const longestText = values.reduce<number>((max, value) => {
-    return Math.max(max, getCellTextLength(value));
-  }, 0);
-
-  return Math.min(Math.max(longestText + 2, 10), 55);
-}
-
 function formatDate(value: string) {
   if (!value) {
     return "-";
@@ -110,6 +69,17 @@ function formatDate(value: string) {
   }
 
   return `${day}/${month}/${year}`;
+}
+
+function escapeCsvValue(value: string | number) {
+  const normalized = String(value ?? "");
+  const escaped = normalized.replace(/"/g, '""');
+
+  if (/[",\n\r]/.test(escaped)) {
+    return `"${escaped}"`;
+  }
+
+  return escaped;
 }
 
 function isTaskDelayed(task: ProjectTask, today: Date) {
@@ -440,155 +410,72 @@ function App() {
       task.atividade,
       task.descricao,
       task.responsavel,
-      toExcelDate(task.dataInicioPrevisto),
-      toExcelDate(task.dataTerminoPrevisto),
-      toExcelDate(task.dataInicioReal),
-      toExcelDate(task.dataTerminoReal),
+      formatDate(task.dataInicioPrevisto),
+      formatDate(task.dataTerminoPrevisto),
+      formatDate(task.dataInicioReal),
+      formatDate(task.dataTerminoReal),
       task.status,
     ]);
 
-    const columnWidths = headers.map((header, columnIndex) => {
-      const values = [header, ...rows.map((row) => row[columnIndex])];
+    const csvContent = [headers, ...rows]
+      .map((row) => row.map((cell) => escapeCsvValue(cell)).join(","))
+      .join("\r\n");
 
-      if (columnIndex === 4) {
-        return Math.min(
-          Math.max(
-            values.reduce<number>((max, value) => {
-              return Math.max(max, getCellTextLength(value));
-            }, 0) + 4,
-            26,
-          ),
-          55,
-        );
-      }
-
-      if (columnIndex >= 6 && columnIndex <= 9) {
-        return 16;
-      }
-
-      return getColumnWidth(values);
+    const blob = new Blob(["\uFEFF", csvContent], {
+      type: "text/csv;charset=utf-8;",
     });
+    const downloadUrl = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
 
-    const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Atividades");
+    anchor.href = downloadUrl;
+    anchor.download = "atividades_projeto.csv";
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(downloadUrl);
 
-    ws["!cols"] = columnWidths.map((width) => ({ wch: width }));
-    ws["!autofilter"] = { ref: ws["!ref"] ?? "A1:K1" };
+    setToast({ type: "success", message: "CSV exportado com sucesso." });
+  };
 
-    const activeFilterColumns = new Set<number>();
-    filterFields.forEach((field, index) => {
-      if (hasActiveFilter(filters, field)) {
-        activeFilterColumns.add(index + 1);
-      }
-    });
-
-    const headerStyle = {
-      font: { bold: true, color: { rgb: "FFFFFF" } },
-      fill: { fgColor: { rgb: "0F766E" } },
-      alignment: { horizontal: "center", vertical: "center", wrapText: true },
-      border: {
-        top: { style: "thin", color: { rgb: "0F172A" } },
-        bottom: { style: "thin", color: { rgb: "0F172A" } },
-        left: { style: "thin", color: { rgb: "0F172A" } },
-        right: { style: "thin", color: { rgb: "0F172A" } },
-      },
-    };
-
-    const baseCellStyle = {
-      alignment: { horizontal: "center", vertical: "center", wrapText: true },
-      border: {
-        top: { style: "thin", color: { rgb: "D1D5DB" } },
-        bottom: { style: "thin", color: { rgb: "D1D5DB" } },
-        left: { style: "thin", color: { rgb: "D1D5DB" } },
-        right: { style: "thin", color: { rgb: "D1D5DB" } },
-      },
-    };
-
-    const highlightedCellStyle = {
-      ...baseCellStyle,
-      fill: { fgColor: { rgb: "DCFCE7" } },
-    };
-
-    // Map status to colors
-    const statusColorMap: Record<string, string> = {
-      "Não iniciado": "E2E8F0", // Slate
-      "Em andamento": "FEF3C7", // Amber
-      Concluído: "D1FAE5", // Emerald
-      Atrasado: "FEE2E2", // Red
-    };
-
-    const range = XLSX.utils.decode_range(ws["!ref"] || "A1");
-    for (let col = range.s.c; col <= range.e.c; col++) {
-      const cellRef = XLSX.utils.encode_cell({ r: 0, c: col });
-      if (ws[cellRef]) {
-        ws[cellRef].s = {
-          ...headerStyle,
-          fill: activeFilterColumns.has(col)
-            ? { fgColor: { rgb: "065F46" } }
-            : headerStyle.fill,
-        };
-      }
+  const handleExportExcel = () => {
+    if (filteredAndSortedTasks.length === 0) {
+      setToast({
+        type: "error",
+        message: "Não há dados para exportar com os filtros atuais.",
+      });
+      return;
     }
 
-    for (let row = range.s.r + 1; row <= range.e.r; row++) {
-      let rowHeight = 20;
+    const headers = [
+      "ID",
+      "Projeto",
+      "Atividade",
+      "Descrição",
+      "Responsável",
+      "Data início previsto",
+      "Data término previsto",
+      "Data início real",
+      "Data término real",
+      "Status",
+    ];
 
-      for (let col = range.s.c; col <= range.e.c; col++) {
-        const cellRef = XLSX.utils.encode_cell({ r: row, c: col });
-        if (ws[cellRef]) {
-          const isDateColumn = col >= 6 && col <= 9;
-          const isStatusColumn = col === 9; // Status is column J (index 9)
-          const isFilteredColumn = activeFilterColumns.has(col);
+    const rows = filteredAndSortedTasks.map((task) => [
+      task.id,
+      task.projeto,
+      task.atividade,
+      task.descricao,
+      task.responsavel,
+      formatDate(task.dataInicioPrevisto),
+      formatDate(task.dataTerminoPrevisto),
+      formatDate(task.dataInicioReal),
+      formatDate(task.dataTerminoReal),
+      task.status,
+    ]);
 
-          let cellStyle: any = isFilteredColumn
-            ? highlightedCellStyle
-            : baseCellStyle;
-
-          // Apply status color to Status column
-          if (isStatusColumn && ws[cellRef].v) {
-            const statusValue = ws[cellRef].v as string;
-            const statusColor = statusColorMap[statusValue];
-            if (statusColor) {
-              cellStyle = {
-                ...cellStyle,
-                fill: { fgColor: { rgb: statusColor } },
-              };
-            }
-          }
-
-          ws[cellRef].s = {
-            ...cellStyle,
-            alignment: {
-              horizontal: "center",
-              vertical: "center",
-              wrapText: true,
-            },
-          };
-
-          if (isDateColumn && typeof ws[cellRef].v === "number") {
-            ws[cellRef].z = "dd/mm/yyyy";
-          }
-
-          if (col === 4) {
-            const descriptionLength = getCellTextLength(ws[cellRef].v);
-            const estimatedLines = Math.max(
-              1,
-              Math.ceil(descriptionLength / 28),
-            );
-            rowHeight = Math.max(rowHeight, 18 * estimatedLines);
-          }
-        }
-      }
-
-      if (!ws["!rows"]) {
-        ws["!rows"] = [];
-      }
-
-      ws["!rows"][row] = { hpt: Math.min(rowHeight, 120) };
-    }
-
-    XLSX.writeFile(wb, "atividades_projeto.xlsx");
+    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Atividades");
+    XLSX.writeFile(workbook, "atividades_projeto.xlsx");
 
     setToast({ type: "success", message: "Excel exportado com sucesso." });
   };
@@ -748,6 +635,7 @@ function App() {
       onSort={handleSort}
       onCreate={handleCreate}
       onExport={() => setIsExportModalOpen(true)}
+      onExportExcel={handleExportExcel}
       onExportCsv={handleExportCsv}
       onExportPdf={handleExportPdf}
       onExportModalClose={() => setIsExportModalOpen(false)}

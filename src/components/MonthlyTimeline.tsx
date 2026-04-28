@@ -48,6 +48,16 @@ function formatShortDate(date: Date) {
   }).format(date);
 }
 
+function formatTooltipDate(value: string) {
+  const [year, month, day] = value.split("-");
+
+  if (!year || !month || !day) {
+    return value;
+  }
+
+  return `${day}/${month}/${year}`;
+}
+
 function isSameDay(first: Date, second: Date) {
   return first.toDateString() === second.toDateString();
 }
@@ -145,6 +155,30 @@ function getDayBackground(statuses: ProjectTask["status"][]) {
   return "bg-white";
 }
 
+function getStatusStripeColor(status: ProjectTask["status"]) {
+  if (status === "Concluído") {
+    return "bg-emerald-200";
+  }
+
+  if (status === "Em andamento") {
+    return "bg-amber-200";
+  }
+
+  return "bg-slate-200";
+}
+
+function getStatusPriority(status: ProjectTask["status"]) {
+  if (status === "Concluído") {
+    return 0;
+  }
+
+  if (status === "Em andamento") {
+    return 1;
+  }
+
+  return 2;
+}
+
 function getWeekStartDayIndex(weeks: TimelineWeek[], dayKey: string) {
   for (const week of weeks) {
     if (week.days[0].key === dayKey) {
@@ -212,6 +246,13 @@ export function MonthlyTimeline({ tasks }: MonthlyTimelineProps) {
               const dayStatuses = [
                 ...new Set(dayTasks.map((task) => task.status)),
               ];
+              const statusStripes = dayStatuses
+                .sort((first, second) => {
+                  return getStatusPriority(first) - getStatusPriority(second);
+                })
+                .slice(0, 3);
+              const showStatusStripes =
+                dayTasks.length > 1 && statusStripes.length > 0;
 
               return (
                 <div
@@ -221,12 +262,12 @@ export function MonthlyTimeline({ tasks }: MonthlyTimelineProps) {
                       ? dayTasks
                           .map(
                             (task) =>
-                              `${task.atividade} | ${task.dataInicioPrevisto} até ${task.dataTerminoPrevisto}`,
+                              `${task.atividade} | ${formatTooltipDate(task.dataInicioPrevisto)} até ${formatTooltipDate(task.dataTerminoPrevisto)}`,
                           )
                           .join("\n")
                       : undefined
                   }
-                  className={`flex min-h-4 flex-col items-center px-2 py-2 ${
+                  className={`relative flex min-h-4 flex-col items-center px-2 py-2 ${
                     isWeekStart
                       ? "border-l-4 border-l-gray-300"
                       : "border-l border-gray-100"
@@ -248,8 +289,18 @@ export function MonthlyTimeline({ tasks }: MonthlyTimelineProps) {
                         : "text-gray-500"
                   }`}
                 >
+                  {showStatusStripes && (
+                    <div className="pointer-events-none absolute inset-0 flex flex-col">
+                      {statusStripes.map((status) => (
+                        <div
+                          key={`${day.key}-${status}`}
+                          className={`flex-1 ${getStatusStripeColor(status)}`}
+                        />
+                      ))}
+                    </div>
+                  )}
                   <span
-                    className={`mb-1 h-2 w-px rounded-full ${
+                    className={`relative z-10 mb-1 h-2 w-px rounded-full ${
                       hasDelayedTask
                         ? "bg-red-600"
                         : isToday || hasTasks
@@ -257,10 +308,10 @@ export function MonthlyTimeline({ tasks }: MonthlyTimelineProps) {
                           : "bg-gray-300"
                     }`}
                   />
-                  <span className="text-[10px] font-semibold uppercase tracking-wide">
+                  <span className="relative z-10 text-[10px] font-semibold uppercase tracking-wide">
                     {formatShortDay(day.date)}
                   </span>
-                  <span className="text-sm font-medium leading-none">
+                  <span className="relative z-10 text-sm font-medium leading-none">
                     {day.date.getDate()}
                   </span>
                 </div>

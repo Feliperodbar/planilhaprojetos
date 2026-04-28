@@ -44,6 +44,7 @@ interface TaskManagerPageProps {
   onSort: (key: SortKey) => void;
   onCreate: () => void;
   onExport: () => void;
+  onExportExcel: () => void;
   onExportCsv: () => void;
   onExportPdf: () => void;
   onExportModalClose: () => void;
@@ -140,6 +141,7 @@ export function TaskManagerPage({
   onSort,
   onCreate,
   onExport,
+  onExportExcel,
   onExportCsv,
   onExportPdf,
   onExportModalClose,
@@ -308,7 +310,8 @@ export function TaskManagerPage({
 
       <ExportModal
         isOpen={isExportModalOpen}
-        onExcel={onExportCsv}
+        onExcel={onExportExcel}
+        onCsv={onExportCsv}
         onPDF={onExportPdf}
         onClose={onExportModalClose}
       />
