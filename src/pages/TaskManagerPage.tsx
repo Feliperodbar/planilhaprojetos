@@ -1,6 +1,7 @@
 import { FormModal } from "../components/FormModal";
 import { MonthlyTimeline } from "../components/MonthlyTimeline";
 import { Table } from "../components/Table";
+import { ExportModal } from "../components/ExportModal";
 import type { SortConfig, SortKey } from "../components/Table";
 import type { ProjectTask, TaskStatus } from "../types/project";
 import neoHeaderLogo from "../assets/neoheader.svg";
@@ -24,6 +25,7 @@ interface TaskManagerPageProps {
   tasks: ProjectTask[];
   taskToEdit: ProjectTask | null;
   isModalOpen: boolean;
+  isExportModalOpen: boolean;
   isFiltersOpen: boolean;
   activeFilterCount: number;
   filters: FilterState;
@@ -34,13 +36,17 @@ interface TaskManagerPageProps {
   activityOptions: string[];
   descricaoOptions: string[];
   responsavelOptions: string[];
+  productivityPercentage: number;
   toast: ToastState | null;
   onToggleFilters: () => void;
   onToggleFilter: (field: FilterField, value: string) => void;
   onClearFilters: () => void;
   onSort: (key: SortKey) => void;
   onCreate: () => void;
+  onExport: () => void;
   onExportCsv: () => void;
+  onExportPdf: () => void;
+  onExportModalClose: () => void;
   onEdit: (task: ProjectTask) => void;
   onDelete: (task: ProjectTask) => void;
   onModalClose: () => void;
@@ -115,6 +121,7 @@ export function TaskManagerPage({
   tasks,
   taskToEdit,
   isModalOpen,
+  isExportModalOpen,
   isFiltersOpen,
   activeFilterCount,
   filters,
@@ -125,13 +132,17 @@ export function TaskManagerPage({
   activityOptions,
   descricaoOptions,
   responsavelOptions,
+  productivityPercentage,
   toast,
   onToggleFilters,
   onToggleFilter,
   onClearFilters,
   onSort,
   onCreate,
+  onExport,
   onExportCsv,
+  onExportPdf,
+  onExportModalClose,
   onEdit,
   onDelete,
   onModalClose,
@@ -147,9 +158,9 @@ export function TaskManagerPage({
             <img
               src={neoHeaderLogo}
               alt="Neoenergia"
-              className="mb-3 h-10 w-auto md:h-12"
+              className="mb-1 h-10 w-auto md:h-10"
             />
-            <h1 className="text-2xl font-bold text-gray-800">
+            <h1 className="text-xl font-bold text-gray-800">
               Gestão de Atividades
             </h1>
           </div>
@@ -160,15 +171,15 @@ export function TaskManagerPage({
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={onExportCsv}
-            className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 font-medium text-emerald-800 transition hover:bg-emerald-100"
+            onClick={onExport}
+            className="rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1 font-medium text-emerald-800 transition hover:bg-emerald-100"
           >
-            Exportar Excel
+            Exportar
           </button>
           <button
             type="button"
             onClick={onCreate}
-            className="rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white transition hover:bg-emerald-700"
+            className="rounded-lg bg-emerald-600 px-2 py-1 font-medium text-white transition hover:bg-emerald-700"
           >
             Nova Atividade
           </button>
@@ -178,7 +189,7 @@ export function TaskManagerPage({
           <button
             type="button"
             onClick={onToggleFilters}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2 font-medium text-gray-700 transition hover:border-emerald-300 hover:text-emerald-700"
+            className="rounded-lg border border-gray-300 bg-white px-2 py-1 font-medium text-gray-700 transition hover:border-emerald-300 hover:text-emerald-700"
           >
             Filtros
             {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
@@ -188,6 +199,14 @@ export function TaskManagerPage({
               Página {currentPage} de {totalPages}
             </p>
           )}
+          <div
+            className="flex items-center rounded-lg border border-slate-200 bg-slate-50 px-4 py-2 text-slate-900"
+            title="Produtividade geral"
+          >
+            <span className="text-xl font-semibold leading-none">
+              {productivityPercentage}%
+            </span>
+          </div>
         </div>
       </nav>
 
@@ -285,6 +304,13 @@ export function TaskManagerPage({
         responsavelOptions={responsavelOptions}
         onClose={onModalClose}
         onSave={onModalSave}
+      />
+
+      <ExportModal
+        isOpen={isExportModalOpen}
+        onExcel={onExportCsv}
+        onPDF={onExportPdf}
+        onClose={onExportModalClose}
       />
     </div>
   );

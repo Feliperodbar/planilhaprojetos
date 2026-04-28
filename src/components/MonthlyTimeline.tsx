@@ -145,6 +145,15 @@ function getDayBackground(statuses: ProjectTask["status"][]) {
   return "bg-white";
 }
 
+function getWeekStartDayIndex(weeks: TimelineWeek[], dayKey: string) {
+  for (const week of weeks) {
+    if (week.days[0].key === dayKey) {
+      return week.startIndex;
+    }
+  }
+  return -1;
+}
+
 export function MonthlyTimeline({ tasks }: MonthlyTimelineProps) {
   const today = new Date();
   const weeks = getMonthWeeks(today);
@@ -192,6 +201,7 @@ export function MonthlyTimeline({ tasks }: MonthlyTimelineProps) {
           >
             {days.map((day) => {
               const isToday = isSameDay(day.date, today);
+              const isWeekStart = getWeekStartDayIndex(weeks, day.key) >= 0;
               const dayTasks = tasks.filter((task) =>
                 taskSpansDay(task, day.date),
               );
@@ -216,11 +226,15 @@ export function MonthlyTimeline({ tasks }: MonthlyTimelineProps) {
                           .join("\n")
                       : undefined
                   }
-                  className={`flex min-h-4 flex-col items-center border-l border-gray-100 px-2 py-2 ${
+                  className={`flex min-h-4 flex-col items-center px-2 py-2 ${
+                    isWeekStart
+                      ? "border-l-4 border-l-gray-300"
+                      : "border-l border-gray-100"
+                  } ${
                     hasDelayedTask
                       ? "bg-red-100"
                       : isToday
-                        ? "bg-emerald-50"
+                        ? "bg-emerald-200"
                         : hasTasks
                           ? getDayBackground(dayStatuses)
                           : day.inCurrentMonth
