@@ -20,7 +20,6 @@ interface TableProps {
 
 const columns: Array<{ label: string; key: SortKey }> = [
   { label: "ID", key: "id" },
-  { label: "Solicitante", key: "solicitante" },
   { label: "Projeto", key: "projeto" },
   { label: "Atividade", key: "atividade" },
   { label: "Descrição", key: "descricao" },
@@ -86,7 +85,7 @@ export function Table({
         <tbody>
           {tasks.length === 0 ? (
             <tr>
-              <td className="px-3 py-6 text-center text-gray-500" colSpan={12}>
+              <td className="px-3 py-6 text-center text-gray-500" colSpan={11}>
                 Nenhuma tarefa encontrada.
               </td>
             </tr>

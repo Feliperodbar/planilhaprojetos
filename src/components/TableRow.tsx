@@ -46,9 +46,6 @@ export function TableRow({ task, onEdit, onDelete }: TableRowProps) {
   return (
     <tr className={isLate ? "bg-red-100" : "bg-white"}>
       <td className={cellClassName}>{task.id}</td>
-      <td className={`${cellClassName} truncate`} title={task.solicitante}>
-        {task.solicitante || "-"}
-      </td>
       <td className={`${cellClassName} truncate`} title={task.projeto}>
         {task.projeto}
       </td>
