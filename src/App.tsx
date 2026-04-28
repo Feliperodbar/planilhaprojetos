@@ -496,7 +496,7 @@ function App() {
     };
 
     const baseCellStyle = {
-      alignment: { vertical: "center", wrapText: true },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
       border: {
         top: { style: "thin", color: { rgb: "D1D5DB" } },
         bottom: { style: "thin", color: { rgb: "D1D5DB" } },
@@ -534,7 +534,7 @@ function App() {
           ws[cellRef].s = {
             ...(isFilteredColumn ? highlightedCellStyle : baseCellStyle),
             alignment: {
-              horizontal: isDateColumn ? "center" : "left",
+              horizontal: "center",
               vertical: "center",
               wrapText: true,
             },
