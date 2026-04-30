@@ -54,7 +54,20 @@ export function Table({
 }: TableProps) {
   return (
     <div className="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-sm">
-      <table className="w-full table-fixed text-left text-sm">
+      <table className="w-full table-fixed text-justify text-sm">
+        <colgroup>
+          <col style={{ width: "4%" }} />
+          <col style={{ width: "7%" }} />
+          <col style={{ width: "19%" }} />
+          <col style={{ width: "21%" }} />
+          <col style={{ width: "9%" }} />
+          <col style={{ width: "7%" }} />
+          <col style={{ width: "7%" }} />
+          <col style={{ width: "7%" }} />
+          <col style={{ width: "7%" }} />
+          <col style={{ width: "7%" }} />
+          <col style={{ width: "7%" }} />
+        </colgroup>
         <thead className="bg-emerald-50 text-gray-700">
           <tr>
             {columns.map((column) => {

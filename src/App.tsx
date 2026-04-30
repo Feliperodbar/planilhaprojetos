@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { SortConfig, SortKey } from "./components/Table";
@@ -472,7 +472,173 @@ function App() {
       task.status,
     ]);
 
-    const worksheet = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+    const exportedAt = new Date().toLocaleString("pt-BR");
+    const worksheet = XLSX.utils.aoa_to_sheet([
+      ["Gestão de Atividades"],
+      [
+        `Neoenergia • ${filteredAndSortedTasks.length} registro(s) • Exportado em ${exportedAt}`,
+      ],
+      [],
+      headers,
+      ...rows,
+    ]) as XLSX.WorkSheet & {
+      [cell: string]: any;
+      "!cols"?: Array<{ wch: number }>;
+      "!rows"?: Array<{ hpt: number }>;
+      "!merges"?: Array<{
+        s: { r: number; c: number };
+        e: { r: number; c: number };
+      }>;
+    };
+
+    const totalColumns = headers.length;
+    const lastColumn = totalColumns - 1;
+    const titleRow = 1;
+    const subtitleRow = 2;
+    const headerRow = 4;
+    const dataStartRow = 5;
+
+    worksheet["!merges"] = [
+      { s: { r: titleRow - 1, c: 0 }, e: { r: titleRow - 1, c: lastColumn } },
+      {
+        s: { r: subtitleRow - 1, c: 0 },
+        e: { r: subtitleRow - 1, c: lastColumn },
+      },
+    ];
+
+    worksheet["!cols"] = [
+      { wch: 8 },
+      { wch: 18 },
+      { wch: 28 },
+      { wch: 42 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 18 },
+      { wch: 16 },
+    ];
+
+    worksheet["!rows"] = [{ hpt: 24 }, { hpt: 20 }, { hpt: 8 }, { hpt: 22 }];
+
+    const setCellStyle = (address: string, style: Record<string, unknown>) => {
+      if (!worksheet[address]) {
+        return;
+      }
+
+      worksheet[address].s = style;
+    };
+
+    const border = {
+      top: { style: "thin", color: { rgb: "D6EAD8" } },
+      bottom: { style: "thin", color: { rgb: "D6EAD8" } },
+      left: { style: "thin", color: { rgb: "D6EAD8" } },
+      right: { style: "thin", color: { rgb: "D6EAD8" } },
+    } as const;
+
+    const titleStyle = {
+      fill: { fgColor: { rgb: "047857" } },
+      font: { bold: true, color: { rgb: "FFFFFF" }, sz: 14 },
+      alignment: { horizontal: "center", vertical: "center" },
+    };
+
+    const subtitleStyle = {
+      fill: { fgColor: { rgb: "ECFDF5" } },
+      font: { color: { rgb: "065F46" }, italic: true, sz: 10 },
+      alignment: { horizontal: "center", vertical: "center" },
+    };
+
+    const headerStyle = {
+      fill: { fgColor: { rgb: "10B981" } },
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      alignment: { horizontal: "center", vertical: "center", wrapText: true },
+      border,
+    };
+
+    const baseRowFill = "FFFFFF";
+    const zebraRowFill = "F8FFFC";
+    const completedStatusFill = "D1FAE5";
+    const inProgressStatusFill = "FEF3C7";
+    const pendingStatusFill = "E5E7EB";
+
+    setCellStyle("A1", titleStyle);
+    setCellStyle("A2", subtitleStyle);
+
+    for (let columnIndex = 0; columnIndex < totalColumns; columnIndex += 1) {
+      const cellAddress = XLSX.utils.encode_cell({
+        r: headerRow - 1,
+        c: columnIndex,
+      });
+      setCellStyle(cellAddress, headerStyle);
+    }
+
+    const today = new Date();
+
+    rows.forEach((_, rowIndex) => {
+      const task = filteredAndSortedTasks[rowIndex];
+      const worksheetRow = dataStartRow + rowIndex - 1;
+      const isEvenRow = rowIndex % 2 === 0;
+      const rowFill = isEvenRow ? baseRowFill : zebraRowFill;
+      const isDelayedTask =
+        Boolean(task?.dataTerminoPrevisto) &&
+        task?.status !== "Concluído" &&
+        new Date(`${task.dataTerminoPrevisto}T00:00:00`) <
+          new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+      for (let columnIndex = 0; columnIndex < totalColumns; columnIndex += 1) {
+        const cellAddress = XLSX.utils.encode_cell({
+          r: worksheetRow,
+          c: columnIndex,
+        });
+        const cell = worksheet[cellAddress];
+
+        if (!cell) {
+          continue;
+        }
+
+        const isDateColumn = columnIndex >= 5 && columnIndex <= 8;
+        const isStatusColumn = columnIndex === 9;
+        const isTextColumn = columnIndex === 2 || columnIndex === 3;
+
+        let fillColor = rowFill;
+
+        if (isStatusColumn) {
+          const status = String(cell.v ?? "");
+          if (status === "Concluído") {
+            fillColor = completedStatusFill;
+          } else if (status === "Em andamento") {
+            fillColor = inProgressStatusFill;
+          } else if (status === "Não iniciado") {
+            fillColor = pendingStatusFill;
+          }
+          if (isDelayedTask) {
+            fillColor = "FECACA";
+          }
+        }
+
+        if (isDelayedTask && !isStatusColumn) {
+          fillColor = "FEF2F2";
+        }
+
+        cell.s = {
+          fill: { fgColor: { rgb: fillColor } },
+          font: {
+            color: { rgb: isStatusColumn ? "1F2937" : "111827" },
+            bold: isStatusColumn,
+          },
+          alignment: {
+            horizontal:
+              isDateColumn || columnIndex === 0 || isStatusColumn
+                ? "center"
+                : "left",
+            vertical: "center",
+            wrapText: isTextColumn,
+          },
+          border,
+        };
+      }
+    });
+
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Atividades");
     XLSX.writeFile(workbook, "atividades_projeto.xlsx");

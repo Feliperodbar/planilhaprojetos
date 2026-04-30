@@ -49,10 +49,16 @@ export function TableRow({ task, onEdit, onDelete }: TableRowProps) {
       <td className={`${cellClassName} truncate`} title={task.projeto}>
         {task.projeto}
       </td>
-      <td className={`${cellClassName} truncate`} title={task.atividade}>
+      <td
+        className={`${cellClassName} whitespace-normal break-words`}
+        title={task.atividade}
+      >
         {task.atividade}
       </td>
-      <td className={`${cellClassName} truncate`} title={task.descricao}>
+      <td
+        className={`${cellClassName} whitespace-normal break-words`}
+        title={task.descricao}
+      >
         {task.descricao || "-"}
       </td>
       <td className={`${cellClassName} truncate`} title={task.responsavel}>
