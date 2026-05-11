@@ -5,11 +5,46 @@ import autoTable from "jspdf-autotable";
 import type { SortConfig, SortKey } from "./components/Table";
 import { useLocalStorage } from "./hooks/useLocalStorage";
 import { TaskManagerPage } from "./pages/TaskManagerPage";
+import { AuthGate } from "./components/AuthGate";
+import { ProjectOptionsModal } from "./components/ProjectOptionsModal";
+import { AdminCommentModal } from "./components/AdminCommentModal";
+import { UserReplyModal } from "./components/UserReplyModal";
 import neoHeaderLogo from "./assets/neoheader.svg";
 import type { ProjectTask, ProjectTaskInput } from "./types/project";
+import type { SessionState, SessionUser, UserAccount } from "./types/auth";
+import {
+  canCommentTask,
+  canCreateProjectOption,
+  canCreateTask,
+  canDeleteProjectOption,
+  canDeleteTask,
+  canEditTask,
+  canExportUserData,
+  canViewTask,
+} from "./utils/permissions";
 
 const STORAGE_KEY = "project_tasks";
+const PROJECT_OPTIONS_KEY = "project_options";
+const AUTH_ACCOUNTS_KEY = "auth_accounts";
+const AUTH_SESSION_KEY = "auth_session";
 const ITEMS_PER_PAGE = 8;
+
+const INITIAL_ACCOUNTS: UserAccount[] = [
+  {
+    id: "user-felipe",
+    name: "Felipe",
+    email: "felipe@email.com",
+    password: "123456",
+    role: "user",
+  },
+  {
+    id: "admin-felipe",
+    name: "Felipeadm",
+    email: "felipe@email.com",
+    password: "123456",
+    role: "admin",
+  },
+];
 
 const filterFields = [
   "projeto",
@@ -28,10 +63,43 @@ interface ToastState {
   message: string;
 }
 
+interface LegacyProjectTask {
+  id: number;
+  solicitante: string;
+  projeto: string;
+  atividade: string;
+  descricao: string;
+  responsavel: string;
+  dataInicioPrevisto: string;
+  dataTerminoPrevisto: string;
+  dataInicioReal: string;
+  dataTerminoReal: string;
+  status: ProjectTask["status"];
+  ownerId?: string;
+  ownerName?: string;
+  adminComments?: Array<{
+    id: string;
+    text: string;
+    createdAt: string;
+    createdById: string;
+    createdByName: string;
+  }>;
+  adminComment?: ProjectTask["adminComment"];
+}
+
 const defaultSortConfig: SortConfig = {
   key: "id",
   direction: "asc",
 };
+
+function toSessionUser(account: UserAccount): SessionUser {
+  return {
+    id: account.id,
+    name: account.name,
+    email: account.email,
+    role: account.role,
+  };
+}
 
 function getNextId(tasks: ProjectTask[]) {
   if (tasks.length === 0) {
@@ -121,6 +189,27 @@ function getTaskProductivityScore(task: ProjectTask, today: Date) {
   return 20;
 }
 
+function normalizeProjectOptions(options: string[]) {
+  return [...new Set(options.map((option) => option.trim()).filter(Boolean))];
+}
+
+function getSafeFilenamePart(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-zA-Z0-9-_]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .toLowerCase();
+}
+
+function createCommentId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 async function loadImageDataUrl(src: string) {
   const response = await fetch(src);
   const svgText = await response.text();
@@ -149,9 +238,29 @@ async function loadImageDataUrl(src: string) {
 }
 
 function App() {
+  const [accounts] = useLocalStorage<UserAccount[]>(
+    AUTH_ACCOUNTS_KEY,
+    INITIAL_ACCOUNTS,
+  );
+  const [session, setSession] = useLocalStorage<SessionState | null>(
+    AUTH_SESSION_KEY,
+    null,
+  );
   const [tasks, setTasks] = useLocalStorage<ProjectTask[]>(STORAGE_KEY, []);
+  const [projectOptions, setProjectOptions] = useLocalStorage<string[]>(
+    PROJECT_OPTIONS_KEY,
+    [],
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isProjectOptionsOpen, setIsProjectOptionsOpen] = useState(false);
+  const [isCommentModalOpen, setIsCommentModalOpen] = useState(false);
+  const [isReplyModalOpen, setIsReplyModalOpen] = useState(false);
+  const [commentTargetTask, setCommentTargetTask] =
+    useState<ProjectTask | null>(null);
+  const [replyTargetTask, setReplyTargetTask] = useState<ProjectTask | null>(
+    null,
+  );
   const [taskToEdit, setTaskToEdit] = useState<ProjectTask | null>(null);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
@@ -163,26 +272,144 @@ function App() {
   });
   const [sortConfig, setSortConfig] = useState<SortConfig>(defaultSortConfig);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedUserId, setSelectedUserId] = useState(
+    () => INITIAL_ACCOUNTS.find((account) => account.role === "user")?.id ?? "",
+  );
   const [toast, setToast] = useState<ToastState | null>(null);
 
+  const currentUser = session?.user ?? null;
+
+  const userAccounts = useMemo(
+    () => accounts.filter((account) => account.role === "user"),
+    [accounts],
+  );
+
+  useEffect(() => {
+    setTasks((previous) => {
+      if (previous.length === 0) {
+        return previous;
+      }
+
+      const fallbackUser = currentUser
+        ? currentUser
+        : userAccounts[0]
+          ? toSessionUser(userAccounts[0])
+          : toSessionUser(INITIAL_ACCOUNTS[0]);
+
+      let changed = false;
+
+      const migrated = previous.map((rawTask) => {
+        const task = rawTask as unknown as LegacyProjectTask;
+        const legacySingleComment = task.adminComment ?? null;
+        const legacyCommentsArray = Array.isArray(task.adminComments)
+          ? task.adminComments
+          : [];
+        const migratedComment =
+          legacySingleComment ?? legacyCommentsArray.at(-1) ?? null;
+
+        const nextTask: ProjectTask = {
+          ...task,
+          ownerId: task.ownerId || fallbackUser.id,
+          ownerName: task.ownerName || fallbackUser.name,
+          adminComment: migratedComment,
+        };
+
+        if (
+          !task.ownerId ||
+          !task.ownerName ||
+          task.adminComment === undefined ||
+          Array.isArray(task.adminComments)
+        ) {
+          changed = true;
+        }
+
+        return nextTask;
+      });
+
+      if (!changed) {
+        return previous;
+      }
+
+      return migrated;
+    });
+  }, [currentUser, setTasks, userAccounts]);
+
+  useEffect(() => {
+    setProjectOptions((previous) => {
+      if (previous.length > 0) {
+        const normalized = normalizeProjectOptions(previous);
+        if (normalized.length === previous.length) {
+          return previous;
+        }
+        return normalized;
+      }
+
+      const fromTasks = normalizeProjectOptions(
+        tasks.map((task) => task.projeto),
+      );
+      return fromTasks;
+    });
+  }, [setProjectOptions, tasks]);
+
+  const targetUserId = useMemo(() => {
+    if (!currentUser) {
+      return "";
+    }
+
+    if (currentUser.role === "user") {
+      return currentUser.id;
+    }
+
+    const selectedExists = userAccounts.some(
+      (account) => account.id === selectedUserId,
+    );
+    if (selectedExists) {
+      return selectedUserId;
+    }
+
+    return userAccounts[0]?.id ?? "";
+  }, [currentUser, selectedUserId, userAccounts]);
+
+  const targetUser = useMemo(() => {
+    if (!targetUserId) {
+      return null;
+    }
+
+    return accounts.find((account) => account.id === targetUserId) ?? null;
+  }, [accounts, targetUserId]);
+
+  const scopedTasks = useMemo(() => {
+    if (!currentUser || !targetUserId) {
+      return [];
+    }
+
+    return tasks.filter((task) => canViewTask(currentUser, task, targetUserId));
+  }, [currentUser, targetUserId, tasks]);
+
   const projetoOptions = useMemo(
-    () => [...new Set(tasks.map((task) => task.projeto).filter(Boolean))],
-    [tasks],
+    () => normalizeProjectOptions(projectOptions),
+    [projectOptions],
   );
 
   const responsavelOptions = useMemo(
-    () => [...new Set(tasks.map((task) => task.responsavel).filter(Boolean))],
-    [tasks],
+    () => [
+      ...new Set(scopedTasks.map((task) => task.responsavel).filter(Boolean)),
+    ],
+    [scopedTasks],
   );
 
   const activityOptions = useMemo(
-    () => [...new Set(tasks.map((task) => task.atividade).filter(Boolean))],
-    [tasks],
+    () => [
+      ...new Set(scopedTasks.map((task) => task.atividade).filter(Boolean)),
+    ],
+    [scopedTasks],
   );
 
   const descricaoOptions = useMemo(
-    () => [...new Set(tasks.map((task) => task.descricao).filter(Boolean))],
-    [tasks],
+    () => [
+      ...new Set(scopedTasks.map((task) => task.descricao).filter(Boolean)),
+    ],
+    [scopedTasks],
   );
 
   const activeFilterCount = filterFields.reduce((count, field) => {
@@ -194,7 +421,7 @@ function App() {
   }, 0);
 
   const filteredAndSortedTasks = useMemo(() => {
-    const filtered = tasks.filter((task) => {
+    const filtered = scopedTasks.filter((task) => {
       const matchesProjeto = matchesSelectedValues(
         task.projeto,
         filters.projeto,
@@ -238,40 +465,32 @@ function App() {
     });
 
     return sorted;
-  }, [tasks, filters, sortConfig]);
+  }, [scopedTasks, filters, sortConfig]);
 
   const totalPages = Math.max(
     1,
     Math.ceil(filteredAndSortedTasks.length / ITEMS_PER_PAGE),
   );
 
+  const effectiveCurrentPage = Math.min(currentPage, totalPages);
+
   const paginatedTasks = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    const start = (effectiveCurrentPage - 1) * ITEMS_PER_PAGE;
     return filteredAndSortedTasks.slice(start, start + ITEMS_PER_PAGE);
-  }, [filteredAndSortedTasks, currentPage]);
+  }, [effectiveCurrentPage, filteredAndSortedTasks]);
 
   const productivityPercentage = useMemo(() => {
-    if (tasks.length === 0) {
+    if (scopedTasks.length === 0) {
       return 0;
     }
 
     const today = new Date();
-    const totalScore = tasks.reduce((sum, task) => {
+    const totalScore = scopedTasks.reduce((sum, task) => {
       return sum + getTaskProductivityScore(task, today);
     }, 0);
 
-    return toPercentage(totalScore, tasks.length * 100);
-  }, [tasks]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filters]);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
+    return toPercentage(totalScore, scopedTasks.length * 100);
+  }, [scopedTasks]);
 
   useEffect(() => {
     if (!toast) {
@@ -307,11 +526,20 @@ function App() {
   };
 
   const handleCreate = () => {
+    if (!currentUser || !canCreateTask(currentUser)) {
+      setToast({
+        type: "error",
+        message: "Seu perfil não pode criar atividades.",
+      });
+      return;
+    }
+
     setTaskToEdit(null);
     setIsModalOpen(true);
   };
 
   const handleToggleFilter = (field: FilterField, value: string) => {
+    setCurrentPage(1);
     setFilters((previous) => {
       const currentValues = previous[field];
       const nextValues = currentValues.includes(value)
@@ -326,6 +554,7 @@ function App() {
   };
 
   const handleClearFilters = () => {
+    setCurrentPage(1);
     setFilters({
       projeto: [],
       atividade: [],
@@ -336,13 +565,29 @@ function App() {
   };
 
   const handleEdit = (task: ProjectTask) => {
+    if (!currentUser || !canEditTask(currentUser, task)) {
+      setToast({
+        type: "error",
+        message: "Seu perfil não pode editar esta atividade.",
+      });
+      return;
+    }
+
     setTaskToEdit(task);
     setIsModalOpen(true);
   };
 
   const handleDelete = (task: ProjectTask) => {
+    if (!currentUser || !canDeleteTask(currentUser, task)) {
+      setToast({
+        type: "error",
+        message: "Seu perfil não pode excluir esta atividade.",
+      });
+      return;
+    }
+
     const confirmed = window.confirm(
-      `Deseja realmente excluir a atividade \"${task.atividade}\" (ID ${task.id})?`,
+      `Deseja realmente excluir a atividade "${task.atividade}" (ID ${task.id})?`,
     );
 
     if (!confirmed) {
@@ -354,11 +599,48 @@ function App() {
   };
 
   const handleSave = (taskData: ProjectTaskInput) => {
+    if (!currentUser || !canCreateTask(currentUser)) {
+      setToast({
+        type: "error",
+        message: "Seu perfil não pode salvar atividades.",
+      });
+      return;
+    }
+
+    if (!projetoOptions.includes(taskData.projeto.trim())) {
+      setToast({
+        type: "error",
+        message:
+          "Projeto inválido. Selecione um projeto cadastrado pelo administrador.",
+      });
+      return;
+    }
+
+    const normalizedTaskData: ProjectTaskInput = {
+      ...taskData,
+      responsavel: currentUser.name,
+    };
+
     if (taskToEdit) {
+      if (!canEditTask(currentUser, taskToEdit)) {
+        setToast({
+          type: "error",
+          message: "Seu perfil não pode editar esta atividade.",
+        });
+        return;
+      }
+
       setTasks((previous) =>
         previous.map((task) =>
           task.id === taskToEdit.id
-            ? { ...task, ...taskData, id: taskToEdit.id }
+            ? {
+                ...task,
+                ...normalizedTaskData,
+                id: taskToEdit.id,
+                ownerId: task.ownerId,
+                ownerName: task.ownerName,
+                adminComment: task.adminComment,
+              }
             : task,
         ),
       );
@@ -370,7 +652,10 @@ function App() {
       setTasks((previous) => {
         const newTask: ProjectTask = {
           id: getNextId(previous),
-          ...taskData,
+          ownerId: currentUser.id,
+          ownerName: currentUser.name,
+          adminComment: null,
+          ...normalizedTaskData,
         };
 
         return [...previous, newTask];
@@ -382,7 +667,47 @@ function App() {
     setTaskToEdit(null);
   };
 
+  const exportUserName = targetUser?.name ?? currentUser?.name ?? "usuario";
+  const exportFilename = `atividades_${getSafeFilenamePart(exportUserName) || "usuario"}`;
+
+  const getExportRows = () => {
+    return filteredAndSortedTasks.map((task) => [
+      task.id,
+      task.projeto,
+      task.atividade,
+      task.descricao,
+      task.responsavel,
+      formatDate(task.dataInicioPrevisto),
+      formatDate(task.dataTerminoPrevisto),
+      formatDate(task.dataInicioReal),
+      formatDate(task.dataTerminoReal),
+      task.status,
+      task.adminComment?.text || "-",
+      task.adminComment?.userReply?.text || "-",
+    ]);
+  };
+
+  const ensureExportPermission = () => {
+    if (!currentUser || !targetUserId) {
+      return false;
+    }
+
+    if (!canExportUserData(currentUser, targetUserId)) {
+      setToast({
+        type: "error",
+        message: "Seu perfil não pode exportar este conjunto de dados.",
+      });
+      return false;
+    }
+
+    return true;
+  };
+
   const handleExportCsv = () => {
+    if (!ensureExportPermission()) {
+      return;
+    }
+
     if (filteredAndSortedTasks.length === 0) {
       setToast({
         type: "error",
@@ -402,20 +727,11 @@ function App() {
       "Data início real",
       "Data término real",
       "Status",
+      "Comentários admin",
+      "Resposta do usuário",
     ];
 
-    const rows = filteredAndSortedTasks.map((task) => [
-      task.id,
-      task.projeto,
-      task.atividade,
-      task.descricao,
-      task.responsavel,
-      formatDate(task.dataInicioPrevisto),
-      formatDate(task.dataTerminoPrevisto),
-      formatDate(task.dataInicioReal),
-      formatDate(task.dataTerminoReal),
-      task.status,
-    ]);
+    const rows = getExportRows();
 
     const csvContent = [headers, ...rows]
       .map((row) => row.map((cell) => escapeCsvValue(cell)).join(","))
@@ -428,7 +744,7 @@ function App() {
     const anchor = document.createElement("a");
 
     anchor.href = downloadUrl;
-    anchor.download = "atividades_projeto.csv";
+    anchor.download = `${exportFilename}.csv`;
     document.body.appendChild(anchor);
     anchor.click();
     document.body.removeChild(anchor);
@@ -438,6 +754,10 @@ function App() {
   };
 
   const handleExportExcel = () => {
+    if (!ensureExportPermission()) {
+      return;
+    }
+
     if (filteredAndSortedTasks.length === 0) {
       setToast({
         type: "error",
@@ -457,20 +777,11 @@ function App() {
       "Data início real",
       "Data término real",
       "Status",
+      "Comentários admin",
+      "Resposta do usuário",
     ];
 
-    const rows = filteredAndSortedTasks.map((task) => [
-      task.id,
-      task.projeto,
-      task.atividade,
-      task.descricao,
-      task.responsavel,
-      formatDate(task.dataInicioPrevisto),
-      formatDate(task.dataTerminoPrevisto),
-      formatDate(task.dataInicioReal),
-      formatDate(task.dataTerminoReal),
-      task.status,
-    ]);
+    const rows = getExportRows();
 
     const exportedAt = new Date().toLocaleString("pt-BR");
     const worksheet = XLSX.utils.aoa_to_sheet([
@@ -641,12 +952,16 @@ function App() {
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Atividades");
-    XLSX.writeFile(workbook, "atividades_projeto.xlsx");
+    XLSX.writeFile(workbook, `${exportFilename}.xlsx`);
 
     setToast({ type: "success", message: "Excel exportado com sucesso." });
   };
 
   const handleExportPdf = async () => {
+    if (!ensureExportPermission()) {
+      return;
+    }
+
     if (filteredAndSortedTasks.length === 0) {
       setToast({
         type: "error",
@@ -680,6 +995,8 @@ function App() {
         "Início Real",
         "Término Real",
         "Status",
+        "Comentários",
+        "Resposta",
       ];
 
       const rows = filteredAndSortedTasks.map((task) => [
@@ -693,6 +1010,8 @@ function App() {
         formatDate(task.dataInicioReal),
         formatDate(task.dataTerminoReal),
         task.status,
+        task.adminComment?.text || "-",
+        task.adminComment?.userReply?.text || "-",
       ]);
 
       autoTable(doc, {
@@ -729,18 +1048,6 @@ function App() {
         alternateRowStyles: {
           fillColor: [240, 253, 250],
         },
-        columnStyles: {
-          0: { cellWidth: 12, halign: "center" },
-          1: { cellWidth: 31 },
-          2: { cellWidth: 35 },
-          3: { cellWidth: 54 },
-          4: { cellWidth: 29 },
-          5: { cellWidth: 22, halign: "center" },
-          6: { cellWidth: 22, halign: "center" },
-          7: { cellWidth: 22, halign: "center" },
-          8: { cellWidth: 22, halign: "center" },
-          9: { cellWidth: 22, halign: "center" },
-        },
         didDrawPage: () => {
           doc.addImage(logoDataUrl, "PNG", margin, margin - 1, 46, 11);
 
@@ -766,7 +1073,7 @@ function App() {
         },
       });
 
-      doc.save("atividades_projeto.pdf");
+      doc.save(`${exportFilename}.pdf`);
       setToast({ type: "success", message: "PDF exportado com sucesso." });
     } catch (error) {
       console.error("Erro ao gerar PDF:", error);
@@ -777,46 +1084,296 @@ function App() {
     }
   };
 
+  const handleAddProjectOption = (projectName: string) => {
+    if (!currentUser || !canCreateProjectOption(currentUser)) {
+      setToast({
+        type: "error",
+        message: "Seu perfil não pode adicionar projetos.",
+      });
+      return;
+    }
+
+    setProjectOptions((previous) => {
+      const merged = normalizeProjectOptions([...previous, projectName]);
+      return merged;
+    });
+
+    setToast({ type: "success", message: "Projeto adicionado com sucesso." });
+  };
+
+  const handleRemoveProjectOption = (projectName: string) => {
+    if (!currentUser || !canDeleteProjectOption(currentUser)) {
+      setToast({
+        type: "error",
+        message: "Seu perfil não pode remover projetos.",
+      });
+      return;
+    }
+
+    const isInUse = tasks.some((task) => task.projeto === projectName);
+    if (isInUse) {
+      setToast({
+        type: "error",
+        message:
+          "Não é possível remover: projeto já está em uso em atividades.",
+      });
+      return;
+    }
+
+    setProjectOptions((previous) =>
+      previous.filter((option) => option !== projectName),
+    );
+    setToast({ type: "success", message: "Projeto removido com sucesso." });
+  };
+
+  const handleOpenCommentModal = (task: ProjectTask) => {
+    if (!currentUser || !canCommentTask(currentUser)) {
+      setToast({
+        type: "error",
+        message: "Seu perfil não pode comentar atividades.",
+      });
+      return;
+    }
+
+    setCommentTargetTask(task);
+    setIsCommentModalOpen(true);
+  };
+
+  const handleSaveComment = (text: string) => {
+    if (!currentUser || !commentTargetTask || !canCommentTask(currentUser)) {
+      return;
+    }
+
+    setTasks((previous) =>
+      previous.map((task) => {
+        if (task.id !== commentTargetTask.id) {
+          return task;
+        }
+
+        return {
+          ...task,
+          adminComment: {
+            id: task.adminComment?.id ?? createCommentId(),
+            text,
+            createdAt: new Date().toISOString(),
+            createdById: currentUser.id,
+            createdByName: currentUser.name,
+            userReadAt: undefined,
+            userReply: undefined,
+          },
+        };
+      }),
+    );
+
+    setToast({ type: "success", message: "Comentário salvo com sucesso." });
+    setCommentTargetTask(null);
+  };
+
+  const handleOpenReplyModal = (task: ProjectTask) => {
+    if (!currentUser || !canEditTask(currentUser, task) || !task.adminComment) {
+      setToast({
+        type: "error",
+        message: "Não há comentário do administrador para responder.",
+      });
+      return;
+    }
+
+    setReplyTargetTask(task);
+    setIsReplyModalOpen(true);
+  };
+
+  const handleSaveReply = (text: string) => {
+    if (!currentUser || !replyTargetTask) {
+      return;
+    }
+
+    setTasks((previous) =>
+      previous.map((task) => {
+        if (task.id !== replyTargetTask.id || !task.adminComment) {
+          return task;
+        }
+
+        return {
+          ...task,
+          adminComment: {
+            ...task.adminComment,
+            userReadAt: new Date().toISOString(),
+            userReply: {
+              text,
+              createdAt: new Date().toISOString(),
+              createdById: currentUser.id,
+              createdByName: currentUser.name,
+            },
+          },
+        };
+      }),
+    );
+
+    setToast({ type: "success", message: "Resposta enviada com sucesso." });
+    setReplyTargetTask(null);
+  };
+
+  const handleMarkCommentRead = (taskToMark: ProjectTask) => {
+    if (!currentUser || !canEditTask(currentUser, taskToMark)) {
+      return;
+    }
+
+    setTasks((previous) =>
+      previous.map((task) => {
+        if (
+          task.id !== taskToMark.id ||
+          !task.adminComment ||
+          task.adminComment.userReadAt
+        ) {
+          return task;
+        }
+
+        return {
+          ...task,
+          adminComment: {
+            ...task.adminComment,
+            userReadAt: new Date().toISOString(),
+          },
+        };
+      }),
+    );
+  };
+
+  const handleLogin = (account: UserAccount) => {
+    setSession({ user: toSessionUser(account) });
+    setToast({ type: "success", message: `Bem-vindo, ${account.name}.` });
+  };
+
+  const handleLogout = () => {
+    setSession(null);
+    setTaskToEdit(null);
+    setIsModalOpen(false);
+    setFilters({
+      projeto: [],
+      atividade: [],
+      descricao: [],
+      responsavel: [],
+      status: [],
+    });
+  };
+
+  if (!currentUser) {
+    return <AuthGate accounts={accounts} onLogin={handleLogin} />;
+  }
+
+  const exportScopeLabel =
+    currentUser.role === "admin"
+      ? `Atividades de ${targetUser?.name ?? "usuário selecionado"}`
+      : `Minhas atividades (${currentUser.name})`;
+
   return (
-    <TaskManagerPage
-      tasks={paginatedTasks}
-      taskToEdit={taskToEdit}
-      isModalOpen={isModalOpen}
-      isExportModalOpen={isExportModalOpen}
-      isFiltersOpen={isFiltersOpen}
-      activeFilterCount={activeFilterCount}
-      filters={filters}
-      sortConfig={sortConfig}
-      currentPage={currentPage}
-      totalPages={totalPages}
-      projetoOptions={projetoOptions}
-      activityOptions={activityOptions}
-      descricaoOptions={descricaoOptions}
-      responsavelOptions={responsavelOptions}
-      productivityPercentage={productivityPercentage}
-      toast={toast}
-      onToggleFilters={() => setIsFiltersOpen((previous) => !previous)}
-      onToggleFilter={handleToggleFilter}
-      onClearFilters={handleClearFilters}
-      onSort={handleSort}
-      onCreate={handleCreate}
-      onExport={() => setIsExportModalOpen(true)}
-      onExportExcel={handleExportExcel}
-      onExportCsv={handleExportCsv}
-      onExportPdf={handleExportPdf}
-      onExportModalClose={() => setIsExportModalOpen(false)}
-      onEdit={handleEdit}
-      onDelete={handleDelete}
-      onModalClose={() => {
-        setIsModalOpen(false);
-        setTaskToEdit(null);
-      }}
-      onModalSave={handleSave}
-      onPrevPage={() => setCurrentPage((previous) => Math.max(1, previous - 1))}
-      onNextPage={() =>
-        setCurrentPage((previous) => Math.min(totalPages, previous + 1))
-      }
-    />
+    <>
+      <TaskManagerPage
+        currentUser={currentUser}
+        selectedUserId={targetUserId}
+        selectedUserName={targetUser?.name ?? "Sem usuário selecionado"}
+        userOptions={userAccounts.map((account) => ({
+          id: account.id,
+          name: account.name,
+        }))}
+        tasks={paginatedTasks}
+        taskToEdit={taskToEdit}
+        isModalOpen={isModalOpen}
+        isExportModalOpen={isExportModalOpen}
+        isFiltersOpen={isFiltersOpen}
+        activeFilterCount={activeFilterCount}
+        filters={filters}
+        sortConfig={sortConfig}
+        currentPage={effectiveCurrentPage}
+        totalPages={totalPages}
+        projetoOptions={projetoOptions}
+        activityOptions={activityOptions}
+        descricaoOptions={descricaoOptions}
+        responsavelOptions={responsavelOptions}
+        productivityPercentage={productivityPercentage}
+        toast={toast}
+        canCreateTask={canCreateTask(currentUser)}
+        canCommentTask={canCommentTask(currentUser)}
+        allowNewProjectOption={false}
+        exportScopeLabel={exportScopeLabel}
+        onUserChange={(userId) => {
+          setSelectedUserId(userId);
+          setCurrentPage(1);
+          setFilters({
+            projeto: [],
+            atividade: [],
+            descricao: [],
+            responsavel: [],
+            status: [],
+          });
+        }}
+        onManageProjects={() => setIsProjectOptionsOpen(true)}
+        onLogout={handleLogout}
+        onToggleFilters={() => setIsFiltersOpen((previous) => !previous)}
+        onToggleFilter={handleToggleFilter}
+        onClearFilters={handleClearFilters}
+        onSort={handleSort}
+        onCreate={handleCreate}
+        onExport={() => setIsExportModalOpen(true)}
+        onExportExcel={handleExportExcel}
+        onExportCsv={handleExportCsv}
+        onExportPdf={handleExportPdf}
+        onExportModalClose={() => setIsExportModalOpen(false)}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+        onComment={handleOpenCommentModal}
+        onReply={handleOpenReplyModal}
+        onMarkCommentRead={handleMarkCommentRead}
+        canEditTask={(task) => canEditTask(currentUser, task)}
+        canDeleteTask={(task) => canDeleteTask(currentUser, task)}
+        canReplyTask={(task) =>
+          canEditTask(currentUser, task) && Boolean(task.adminComment)
+        }
+        onModalClose={() => {
+          setIsModalOpen(false);
+          setTaskToEdit(null);
+        }}
+        onModalSave={handleSave}
+        onPrevPage={() =>
+          setCurrentPage((previous) =>
+            Math.max(1, Math.min(previous, totalPages) - 1),
+          )
+        }
+        onNextPage={() =>
+          setCurrentPage((previous) =>
+            Math.min(totalPages, Math.min(previous, totalPages) + 1),
+          )
+        }
+      />
+
+      <ProjectOptionsModal
+        isOpen={isProjectOptionsOpen}
+        options={projetoOptions}
+        onClose={() => setIsProjectOptionsOpen(false)}
+        onAdd={handleAddProjectOption}
+        onRemove={handleRemoveProjectOption}
+      />
+
+      <AdminCommentModal
+        isOpen={isCommentModalOpen}
+        task={commentTargetTask}
+        onClose={() => {
+          setIsCommentModalOpen(false);
+          setCommentTargetTask(null);
+        }}
+        onSave={handleSaveComment}
+      />
+
+      <UserReplyModal
+        isOpen={isReplyModalOpen}
+        task={replyTargetTask}
+        onClose={() => {
+          setIsReplyModalOpen(false);
+          setReplyTargetTask(null);
+        }}
+        onSave={handleSaveReply}
+      />
+    </>
   );
 }
 

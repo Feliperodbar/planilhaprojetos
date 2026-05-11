@@ -1,5 +1,6 @@
 interface ExportModalProps {
   isOpen: boolean;
+  scopeLabel: string;
   onExcel: () => void;
   onCsv: () => void;
   onPDF: () => void;
@@ -8,6 +9,7 @@ interface ExportModalProps {
 
 export function ExportModal({
   isOpen,
+  scopeLabel,
   onExcel,
   onCsv,
   onPDF,
@@ -30,7 +32,7 @@ export function ExportModal({
       <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border border-emerald-100 bg-white p-6 shadow-lg">
         <h2 className="mb-1 text-lg font-bold text-gray-800">Exportar dados</h2>
         <p className="mb-6 text-sm text-gray-600">
-          Escolha o formato desejado para exportar suas atividades.
+          Escopo: <strong>{scopeLabel}</strong>. Escolha o formato desejado.
         </p>
 
         <div className="flex flex-col gap-3">

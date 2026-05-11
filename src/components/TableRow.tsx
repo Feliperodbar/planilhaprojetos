@@ -4,6 +4,14 @@ interface TableRowProps {
   task: ProjectTask;
   onEdit: (task: ProjectTask) => void;
   onDelete: (task: ProjectTask) => void;
+  onComment: (task: ProjectTask) => void;
+  onReply: (task: ProjectTask) => void;
+  onMarkCommentRead: (task: ProjectTask) => void;
+  canEdit: boolean;
+  canDelete: boolean;
+  canReply: boolean;
+  canComment: boolean;
+  showActions: boolean;
 }
 
 function getStatusClasses(status: ProjectTask["status"]) {
@@ -32,9 +40,28 @@ function formatDate(value: string) {
   return `${day}/${month}/${year}`;
 }
 
-export function TableRow({ task, onEdit, onDelete }: TableRowProps) {
+export function TableRow({
+  task,
+  onEdit,
+  onDelete,
+  onComment,
+  onReply,
+  onMarkCommentRead,
+  canEdit,
+  canDelete,
+  canReply,
+  canComment,
+  showActions,
+}: TableRowProps) {
   const today = new Date().toISOString().slice(0, 10);
   const cellClassName = "border-b border-gray-200 px-3 py-2";
+  const adminComment = task.adminComment;
+  const isUnreadForUser = Boolean(
+    canReply && adminComment && !adminComment.userReadAt,
+  );
+  const isReadForUser = Boolean(
+    canReply && adminComment && adminComment.userReadAt,
+  );
 
   // Regra: se a data prevista já passou e a tarefa não foi concluída,
   // destacamos a linha inteira em vermelho para sinalizar atraso.
@@ -81,55 +108,165 @@ export function TableRow({ task, onEdit, onDelete }: TableRowProps) {
       >
         {task.status}
       </td>
-      <td className={cellClassName}>
-        <div className="flex flex-col gap-1 xl:flex-row">
-          <button
-            type="button"
-            onClick={() => onEdit(task)}
-            aria-label={`Editar atividade ${task.atividade}`}
-            title="Editar"
-            className="inline-flex items-center justify-center rounded bg-blue-600 px-2 py-2 text-white hover:bg-blue-700"
+      <td className={`${cellClassName} w-16 text-center`}>
+        {adminComment ? (
+          <div
+            className="group relative inline-flex items-center"
+            onMouseEnter={() => {
+              if (isUnreadForUser) {
+                onMarkCommentRead(task);
+              }
+            }}
           >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+            <span
+              className={`inline-flex h-5 w-5 items-center justify-center ${
+                isUnreadForUser
+                  ? "text-red-600"
+                  : isReadForUser
+                    ? "text-red-300"
+                    : "text-red-600"
+              }`}
+              title={
+                isUnreadForUser
+                  ? "Comentário não lido"
+                  : isReadForUser
+                    ? "Comentário lido"
+                    : "Comentário do administrador"
+              }
             >
-              <path d="M12 20h9" />
-              <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
-            </svg>
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete(task)}
-            aria-label={`Excluir atividade ${task.atividade}`}
-            title="Excluir"
-            className="inline-flex items-center justify-center rounded bg-red-600 px-2 py-2 text-white hover:bg-red-700"
-          >
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 24 24"
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M3 6h18" />
-              <path d="M8 6V4h8v2" />
-              <path d="M19 6l-1 14H6L5 6" />
-              <path d="M10 11v6" />
-              <path d="M14 11v6" />
-            </svg>
-          </button>
-        </div>
+              <svg
+                aria-hidden="true"
+                viewBox="0 0 24 24"
+                className={`h-5 w-5 ${isUnreadForUser ? "animate-pulse" : ""}`}
+                fill="currentColor"
+              >
+                <path d="M7 3h2v18H7z" />
+                <path d="M9 4h10l-2.8 4 2.8 4H9z" />
+              </svg>
+            </span>
+            <div className="pointer-events-none absolute left-6 top-1/2 z-10 hidden w-72 -translate-y-1/2 rounded-lg border border-red-200 bg-white p-3 text-xs text-gray-700 shadow-lg group-hover:block">
+              <p className="font-semibold text-red-700">
+                Comentário do administrador
+              </p>
+              <p className="mt-1">{adminComment.text}</p>
+              {adminComment.userReply && (
+                <>
+                  <p className="mt-2 font-semibold text-emerald-700">
+                    Resposta do usuário
+                  </p>
+                  <p className="mt-1">{adminComment.userReply.text}</p>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
+          <span className="text-xs text-gray-500">Sem comentários</span>
+        )}
       </td>
+      {showActions && (
+        <td className={cellClassName}>
+          <div className="flex flex-col gap-1 xl:flex-row">
+            {canComment && (
+              <button
+                type="button"
+                onClick={() => onComment(task)}
+                aria-label={`Comentar atividade ${task.atividade}`}
+                title="Comentar"
+                className="inline-flex items-center justify-center rounded bg-emerald-600 px-2 py-2 text-white hover:bg-emerald-700"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+              </button>
+            )}
+            {canReply && (
+              <button
+                type="button"
+                onClick={() => onReply(task)}
+                aria-label={`Responder comentário da atividade ${task.atividade}`}
+                title={
+                  adminComment?.userReply
+                    ? "Editar resposta"
+                    : "Responder comentário"
+                }
+                className="inline-flex items-center justify-center rounded bg-indigo-600 px-2 py-2 text-white hover:bg-indigo-700"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M9 17l-5-5 5-5" />
+                  <path d="M20 18v-2a4 4 0 0 0-4-4H4" />
+                </svg>
+              </button>
+            )}
+            {canEdit && (
+              <button
+                type="button"
+                onClick={() => onEdit(task)}
+                aria-label={`Editar atividade ${task.atividade}`}
+                title="Editar"
+                className="inline-flex items-center justify-center rounded bg-blue-600 px-2 py-2 text-white hover:bg-blue-700"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                </svg>
+              </button>
+            )}
+            {canDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(task)}
+                aria-label={`Excluir atividade ${task.atividade}`}
+                title="Excluir"
+                className="inline-flex items-center justify-center rounded bg-red-600 px-2 py-2 text-white hover:bg-red-700"
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-4 w-4"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 6h18" />
+                  <path d="M8 6V4h8v2" />
+                  <path d="M19 6l-1 14H6L5 6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </td>
+      )}
     </tr>
   );
 }

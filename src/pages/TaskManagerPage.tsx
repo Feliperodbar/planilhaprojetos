@@ -3,7 +3,12 @@ import { MonthlyTimeline } from "../components/MonthlyTimeline";
 import { Table } from "../components/Table";
 import { ExportModal } from "../components/ExportModal";
 import type { SortConfig, SortKey } from "../components/Table";
-import type { ProjectTask, TaskStatus } from "../types/project";
+import type {
+  ProjectTask,
+  ProjectTaskInput,
+  TaskStatus,
+} from "../types/project";
+import type { SessionUser } from "../types/auth";
 import neoHeaderLogo from "../assets/neoheader.svg";
 
 interface ToastState {
@@ -22,6 +27,10 @@ interface FilterState {
 type FilterField = keyof FilterState;
 
 interface TaskManagerPageProps {
+  currentUser: SessionUser;
+  selectedUserId: string;
+  selectedUserName: string;
+  userOptions: Array<{ id: string; name: string }>;
   tasks: ProjectTask[];
   taskToEdit: ProjectTask | null;
   isModalOpen: boolean;
@@ -38,6 +47,13 @@ interface TaskManagerPageProps {
   responsavelOptions: string[];
   productivityPercentage: number;
   toast: ToastState | null;
+  canCreateTask: boolean;
+  canCommentTask: boolean;
+  allowNewProjectOption: boolean;
+  exportScopeLabel: string;
+  onUserChange: (userId: string) => void;
+  onManageProjects: () => void;
+  onLogout: () => void;
   onToggleFilters: () => void;
   onToggleFilter: (field: FilterField, value: string) => void;
   onClearFilters: () => void;
@@ -50,8 +66,14 @@ interface TaskManagerPageProps {
   onExportModalClose: () => void;
   onEdit: (task: ProjectTask) => void;
   onDelete: (task: ProjectTask) => void;
+  onComment: (task: ProjectTask) => void;
+  onReply: (task: ProjectTask) => void;
+  onMarkCommentRead: (task: ProjectTask) => void;
+  canEditTask: (task: ProjectTask) => boolean;
+  canDeleteTask: (task: ProjectTask) => boolean;
+  canReplyTask: (task: ProjectTask) => boolean;
   onModalClose: () => void;
-  onModalSave: (task: Omit<ProjectTask, "id">) => void;
+  onModalSave: (task: ProjectTaskInput) => void;
   onPrevPage: () => void;
   onNextPage: () => void;
 }
@@ -119,6 +141,10 @@ function FilterOptionList({
 }
 
 export function TaskManagerPage({
+  currentUser,
+  selectedUserId,
+  selectedUserName,
+  userOptions,
   tasks,
   taskToEdit,
   isModalOpen,
@@ -135,6 +161,13 @@ export function TaskManagerPage({
   responsavelOptions,
   productivityPercentage,
   toast,
+  canCreateTask,
+  canCommentTask,
+  allowNewProjectOption,
+  exportScopeLabel,
+  onUserChange,
+  onManageProjects,
+  onLogout,
   onToggleFilters,
   onToggleFilter,
   onClearFilters,
@@ -147,6 +180,12 @@ export function TaskManagerPage({
   onExportModalClose,
   onEdit,
   onDelete,
+  onComment,
+  onReply,
+  onMarkCommentRead,
+  canEditTask,
+  canDeleteTask,
+  canReplyTask,
   onModalClose,
   onModalSave,
   onPrevPage,
@@ -165,19 +204,32 @@ export function TaskManagerPage({
             <h1 className="text-xl font-bold text-gray-800">
               Gestão de Atividades
             </h1>
+            <p className="mt-1 text-sm text-gray-600">
+              Usuário: <strong>{currentUser.name}</strong> (
+              {currentUser.role === "admin" ? "Administrador" : "Comum"})
+            </p>
           </div>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="self-start rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:border-emerald-300 hover:text-emerald-700"
+          >
+            Sair
+          </button>
         </div>
       </header>
 
       <nav className="mb-4 flex flex-col gap-3 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={onCreate}
-            className="rounded-lg bg-emerald-600 px-2 py-1 font-medium text-white transition hover:bg-emerald-700"
-          >
-            Nova Atividade
-          </button>
+          {canCreateTask && (
+            <button
+              type="button"
+              onClick={onCreate}
+              className="rounded-lg bg-emerald-600 px-2 py-1 font-medium text-white transition hover:bg-emerald-700"
+            >
+              Nova Atividade
+            </button>
+          )}
           <button
             type="button"
             onClick={onExport}
@@ -185,6 +237,15 @@ export function TaskManagerPage({
           >
             Exportar
           </button>
+          {currentUser.role === "admin" && (
+            <button
+              type="button"
+              onClick={onManageProjects}
+              className="rounded-lg border border-blue-200 bg-blue-50 px-2 py-1 font-medium text-blue-800 transition hover:bg-blue-100"
+            >
+              Gerenciar Projetos
+            </button>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -211,6 +272,39 @@ export function TaskManagerPage({
           </div>
         </div>
       </nav>
+
+      {currentUser.role === "admin" && (
+        <section className="mb-4 rounded-2xl border border-blue-100 bg-blue-50/60 p-4 shadow-sm">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-800">
+                Visão do administrador
+              </h2>
+              <p className="text-sm text-gray-600">
+                Visualizando as atividades de{" "}
+                <strong>{selectedUserName}</strong> em modo somente leitura.
+              </p>
+            </div>
+
+            <div className="min-w-64">
+              <label className="mb-1 block text-sm font-medium text-gray-700">
+                Usuário selecionado
+              </label>
+              <select
+                value={selectedUserId}
+                onChange={(event) => onUserChange(event.target.value)}
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none"
+              >
+                {userOptions.map((userOption) => (
+                  <option key={userOption.id} value={userOption.id}>
+                    {userOption.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </section>
+      )}
 
       {isFiltersOpen && (
         <section className="mb-4 rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm md:p-5">
@@ -266,6 +360,13 @@ export function TaskManagerPage({
         onSort={onSort}
         onEdit={onEdit}
         onDelete={onDelete}
+        onComment={onComment}
+        onReply={onReply}
+        onMarkCommentRead={onMarkCommentRead}
+        canEditTask={canEditTask}
+        canDeleteTask={canDeleteTask}
+        canReplyTask={canReplyTask}
+        canCommentTask={canCommentTask}
       />
 
       {totalPages > 1 && (
@@ -303,13 +404,14 @@ export function TaskManagerPage({
         isOpen={isModalOpen}
         taskToEdit={taskToEdit}
         projetoOptions={projetoOptions}
-        responsavelOptions={responsavelOptions}
+        allowNewProjectOption={allowNewProjectOption}
         onClose={onModalClose}
         onSave={onModalSave}
       />
 
       <ExportModal
         isOpen={isExportModalOpen}
+        scopeLabel={exportScopeLabel}
         onExcel={onExportExcel}
         onCsv={onExportCsv}
         onPDF={onExportPdf}

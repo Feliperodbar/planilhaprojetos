@@ -10,7 +10,7 @@ interface FormModalProps {
   isOpen: boolean;
   taskToEdit: ProjectTask | null;
   projetoOptions: string[];
-  responsavelOptions: string[];
+  allowNewProjectOption: boolean;
   onClose: () => void;
   onSave: (task: ProjectTaskInput) => void;
 }
@@ -18,7 +18,6 @@ interface FormModalProps {
 interface FormErrors {
   projeto?: string;
   atividade?: string;
-  responsavel?: string;
 }
 
 const statusOptions: TaskStatus[] = [
@@ -45,6 +44,7 @@ interface SelectWithNewProps {
   value: string;
   onChange: (value: string) => void;
   options: string[];
+  allowNewOption?: boolean;
   required?: boolean;
   error?: string;
 }
@@ -54,6 +54,7 @@ function SelectWithNew({
   value,
   onChange,
   options,
+  allowNewOption = true,
   required,
   error,
 }: SelectWithNewProps) {
@@ -71,8 +72,13 @@ function SelectWithNew({
       return;
     }
 
+    if (!allowNewOption) {
+      setIsNew(false);
+      return;
+    }
+
     setIsNew(!cleanedOptions.includes(value));
-  }, [cleanedOptions, value]);
+  }, [allowNewOption, cleanedOptions, value]);
 
   return (
     <div>
@@ -82,6 +88,11 @@ function SelectWithNew({
       <select
         value={isNew ? "__novo__" : value}
         onChange={(event) => {
+          if (!allowNewOption) {
+            onChange(event.target.value);
+            return;
+          }
+
           if (event.target.value === "__novo__") {
             setIsNew(true);
             onChange("");
@@ -99,7 +110,7 @@ function SelectWithNew({
             {option}
           </option>
         ))}
-        <option value="__novo__">+ Adicionar novo</option>
+        {allowNewOption && <option value="__novo__">+ Adicionar novo</option>}
       </select>
 
       {isNew && (
@@ -123,7 +134,7 @@ export function FormModal({
   isOpen,
   taskToEdit,
   projetoOptions,
-  responsavelOptions,
+  allowNewProjectOption,
   onClose,
   onSave,
 }: FormModalProps) {
@@ -163,10 +174,6 @@ export function FormModal({
 
     if (!formData.atividade.trim()) {
       nextErrors.atividade = "Atividade é obrigatória.";
-    }
-
-    if (!formData.responsavel.trim()) {
-      nextErrors.responsavel = "Responsável é obrigatório.";
     }
 
     if (Object.keys(nextErrors).length > 0) {
@@ -227,6 +234,7 @@ export function FormModal({
               setFormData((prev) => ({ ...prev, projeto: value }))
             }
             options={projetoOptions}
+            allowNewOption={allowNewProjectOption}
             required
             error={errors.projeto}
           />
@@ -251,17 +259,6 @@ export function FormModal({
               <p className="mt-1 text-sm text-red-600">{errors.atividade}</p>
             )}
           </div>
-
-          <SelectWithNew
-            label="Responsável *"
-            value={formData.responsavel}
-            onChange={(value) =>
-              setFormData((prev) => ({ ...prev, responsavel: value }))
-            }
-            options={responsavelOptions}
-            required
-            error={errors.responsavel}
-          />
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700">

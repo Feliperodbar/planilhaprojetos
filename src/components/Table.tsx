@@ -3,7 +3,17 @@ import { TableRow } from "./TableRow";
 
 export type SortDirection = "asc" | "desc";
 
-export type SortKey = keyof ProjectTask;
+export type SortKey =
+  | "id"
+  | "projeto"
+  | "atividade"
+  | "descricao"
+  | "responsavel"
+  | "dataInicioPrevisto"
+  | "dataTerminoPrevisto"
+  | "dataInicioReal"
+  | "dataTerminoReal"
+  | "status";
 
 export interface SortConfig {
   key: SortKey;
@@ -16,6 +26,13 @@ interface TableProps {
   onSort: (key: SortKey) => void;
   onEdit: (task: ProjectTask) => void;
   onDelete: (task: ProjectTask) => void;
+  onComment: (task: ProjectTask) => void;
+  onReply: (task: ProjectTask) => void;
+  onMarkCommentRead: (task: ProjectTask) => void;
+  canEditTask: (task: ProjectTask) => boolean;
+  canDeleteTask: (task: ProjectTask) => boolean;
+  canReplyTask: (task: ProjectTask) => boolean;
+  canCommentTask: boolean;
 }
 
 const columns: Array<{ label: string; key: SortKey }> = [
@@ -51,7 +68,20 @@ export function Table({
   onSort,
   onEdit,
   onDelete,
+  onComment,
+  onReply,
+  onMarkCommentRead,
+  canEditTask,
+  canDeleteTask,
+  canReplyTask,
+  canCommentTask,
 }: TableProps) {
+  const showActions =
+    canCommentTask ||
+    tasks.some(
+      (task) => canEditTask(task) || canDeleteTask(task) || canReplyTask(task),
+    );
+
   return (
     <div className="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-sm">
       <table className="w-full table-fixed text-justify text-sm">
@@ -92,13 +122,17 @@ export function Table({
                 </th>
               );
             })}
-            <th className="px-3 py-2 font-semibold">Ações</th>
+            <th className="px-3 py-2 font-semibold">Comentários</th>
+            {showActions && <th className="px-3 py-2 font-semibold">Ações</th>}
           </tr>
         </thead>
         <tbody>
           {tasks.length === 0 ? (
             <tr>
-              <td className="px-3 py-6 text-center text-gray-500" colSpan={11}>
+              <td
+                className="px-3 py-6 text-center text-gray-500"
+                colSpan={showActions ? 12 : 11}
+              >
                 Nenhuma tarefa encontrada.
               </td>
             </tr>
@@ -109,6 +143,14 @@ export function Table({
                 task={task}
                 onEdit={onEdit}
                 onDelete={onDelete}
+                onComment={onComment}
+                onReply={onReply}
+                onMarkCommentRead={onMarkCommentRead}
+                canEdit={canEditTask(task)}
+                canDelete={canDeleteTask(task)}
+                canReply={canReplyTask(task)}
+                canComment={canCommentTask}
+                showActions={showActions}
               />
             ))
           )}
