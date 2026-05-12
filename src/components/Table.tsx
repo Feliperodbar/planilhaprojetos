@@ -88,7 +88,7 @@ export function Table({
   const actionsColumnWidth = currentUserRole === "user" ? "8%" : "6%";
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-sm">
+    <div className="overflow-x-auto overflow-y-visible rounded-2xl border border-emerald-100 bg-white shadow-sm">
       <table className="w-full table-fixed text-justify text-sm">
         <colgroup>
           <col style={{ width: "3%" }} />

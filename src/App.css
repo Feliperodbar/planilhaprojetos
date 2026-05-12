@@ -182,3 +182,17 @@
     border-right-color: var(--border);
   }
 }
+
+/* Estilos para o balão de comentário */
+.group:has(> .pointer-events-none) {
+  overflow: visible;
+}
+
+.pointer-events-none {
+  overflow: visible;
+}
+
+/* Garante que o balão não fica clipped */
+table {
+  overflow: visible;
+}

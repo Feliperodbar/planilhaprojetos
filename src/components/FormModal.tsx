@@ -200,26 +200,10 @@ export function FormModal({
         className="w-full max-w-xl rounded-lg bg-white p-4 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4">
           <h2 className="text-xl font-semibold text-gray-800">
             {taskToEdit ? "Editar atividade" : "Nova atividade"}
           </h2>
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded border border-gray-300 px-4 py-2 hover:bg-gray-100"
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              form="activity-form"
-              className="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
-            >
-              Salvar
-            </button>
-          </div>
         </div>
 
         <form

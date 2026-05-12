@@ -146,7 +146,7 @@ export function TableRow({
         {task.status}
       </td>
       <td
-        className={`${cellClassName} ${currentUserRole === "user" ? "w-8 px-1 text-center" : "w-16 text-center"} overflow-visible`}
+        className={`border-b border-gray-200 px-3 py-3 ${currentUserRole === "user" ? "w-8 px-1 text-center" : "w-16 text-center"} overflow-visible`}
       >
         {adminComment ? (
           <div
