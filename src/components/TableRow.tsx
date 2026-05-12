@@ -1,4 +1,5 @@
 import type { ProjectTask } from "../types/project";
+import type { UserRole } from "../types/auth";
 
 interface TableRowProps {
   task: ProjectTask;
@@ -12,6 +13,7 @@ interface TableRowProps {
   canReply: boolean;
   canComment: boolean;
   showActions: boolean;
+  currentUserRole: UserRole;
 }
 
 function getStatusClasses(status: ProjectTask["status"]) {
@@ -40,6 +42,19 @@ function formatDate(value: string) {
   return `${day}/${month}/${year}`;
 }
 
+function parseLocalDate(value: string) {
+  if (!value) {
+    return null;
+  }
+
+  const [year, month, day] = value.split("-");
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  return new Date(Number(year), Number(month) - 1, Number(day));
+}
+
 export function TableRow({
   task,
   onEdit,
@@ -52,8 +67,8 @@ export function TableRow({
   canReply,
   canComment,
   showActions,
+  currentUserRole,
 }: TableRowProps) {
-  const today = new Date().toISOString().slice(0, 10);
   const cellClassName = "border-b border-gray-200 px-3 py-2";
   const adminComment = task.adminComment;
   const isUnreadForUser = Boolean(
@@ -62,16 +77,25 @@ export function TableRow({
   const isReadForUser = Boolean(
     canReply && adminComment && adminComment.userReadAt,
   );
+  const shouldShowEmptyCommentState = currentUserRole === "admin";
 
-  // Regra: se a data prevista já passou e a tarefa não foi concluída,
-  // destacamos a linha inteira em vermelho para sinalizar atraso.
+  const dueDate = parseLocalDate(task.dataTerminoPrevisto);
+  const todayDate = new Date();
+  const normalizedToday = new Date(
+    todayDate.getFullYear(),
+    todayDate.getMonth(),
+    todayDate.getDate(),
+  );
+
+  // Se o término previsto já passou e a tarefa não foi concluída,
+  // sinalizamos a linha e a atividade com um alerta visual.
   const isLate =
-    Boolean(task.dataTerminoPrevisto) &&
-    task.dataTerminoPrevisto < today &&
+    dueDate !== null &&
+    dueDate < normalizedToday &&
     task.status !== "Concluído";
 
   return (
-    <tr className={isLate ? "bg-red-100" : "bg-white"}>
+    <tr className={isLate ? "bg-amber-50 text-amber-950" : "bg-white"}>
       <td className={cellClassName}>{task.id}</td>
       <td className={`${cellClassName} truncate`} title={task.projeto}>
         {task.projeto}
@@ -80,7 +104,20 @@ export function TableRow({
         className={`${cellClassName} whitespace-normal break-words`}
         title={task.atividade}
       >
-        {task.atividade}
+        <span className="flex items-start gap-2">
+          {isLate && (
+            <span
+              className="mt-0.5 inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-500 text-[10px] font-bold text-white"
+              title="Prazo vencido"
+              aria-label="Prazo vencido"
+            >
+              !
+            </span>
+          )}
+          <span className={isLate ? "font-semibold text-amber-900" : ""}>
+            {task.atividade}
+          </span>
+        </span>
       </td>
       <td
         className={`${cellClassName} whitespace-normal break-words`}
@@ -108,10 +145,12 @@ export function TableRow({
       >
         {task.status}
       </td>
-      <td className={`${cellClassName} w-16 text-center`}>
+      <td
+        className={`${cellClassName} ${currentUserRole === "user" ? "w-8 px-1 text-center" : "w-16 text-center"} overflow-visible`}
+      >
         {adminComment ? (
           <div
-            className="group relative inline-flex items-center"
+            className="group relative inline-flex items-center overflow-visible"
             onMouseEnter={() => {
               if (isUnreadForUser) {
                 onMarkCommentRead(task);
@@ -144,7 +183,7 @@ export function TableRow({
                 <path d="M9 4h10l-2.8 4 2.8 4H9z" />
               </svg>
             </span>
-            <div className="pointer-events-none absolute left-6 top-1/2 z-10 hidden w-72 -translate-y-1/2 rounded-lg border border-red-200 bg-white p-3 text-xs text-gray-700 shadow-lg group-hover:block">
+            <div className="pointer-events-none absolute left-1/2 -top-2 z-[9999] -translate-x-1/2 -translate-y-full hidden w-72 rounded-lg border border-red-200 bg-white p-3 text-xs text-gray-700 shadow-2xl group-hover:block">
               <p className="font-semibold text-red-700">
                 Comentário do administrador
               </p>
@@ -159,25 +198,25 @@ export function TableRow({
               )}
             </div>
           </div>
-        ) : (
+        ) : shouldShowEmptyCommentState ? (
           <span className="text-xs text-gray-500">Sem comentários</span>
-        )}
+        ) : null}
       </td>
       {showActions && (
-        <td className={cellClassName}>
-          <div className="flex flex-col gap-1 xl:flex-row">
+        <td className={`${cellClassName} px-1 whitespace-nowrap`}>
+          <div className="flex flex-nowrap justify-center gap-0.5">
             {canComment && (
               <button
                 type="button"
                 onClick={() => onComment(task)}
                 aria-label={`Comentar atividade ${task.atividade}`}
                 title="Comentar"
-                className="inline-flex items-center justify-center rounded bg-emerald-600 px-2 py-2 text-white hover:bg-emerald-700"
+                className="inline-flex h-7 w-7 items-center justify-center rounded bg-emerald-600 text-white hover:bg-emerald-700"
               >
                 <svg
                   aria-hidden="true"
                   viewBox="0 0 24 24"
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
@@ -198,12 +237,12 @@ export function TableRow({
                     ? "Editar resposta"
                     : "Responder comentário"
                 }
-                className="inline-flex items-center justify-center rounded bg-indigo-600 px-2 py-2 text-white hover:bg-indigo-700"
+                className="inline-flex h-7 w-7 items-center justify-center rounded bg-indigo-600 text-white hover:bg-indigo-700"
               >
                 <svg
                   aria-hidden="true"
                   viewBox="0 0 24 24"
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
@@ -221,12 +260,12 @@ export function TableRow({
                 onClick={() => onEdit(task)}
                 aria-label={`Editar atividade ${task.atividade}`}
                 title="Editar"
-                className="inline-flex items-center justify-center rounded bg-blue-600 px-2 py-2 text-white hover:bg-blue-700"
+                className="inline-flex h-7 w-7 items-center justify-center rounded bg-blue-600 text-white hover:bg-blue-700"
               >
                 <svg
                   aria-hidden="true"
                   viewBox="0 0 24 24"
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"
@@ -244,12 +283,12 @@ export function TableRow({
                 onClick={() => onDelete(task)}
                 aria-label={`Excluir atividade ${task.atividade}`}
                 title="Excluir"
-                className="inline-flex items-center justify-center rounded bg-red-600 px-2 py-2 text-white hover:bg-red-700"
+                className="inline-flex h-7 w-7 items-center justify-center rounded bg-red-600 text-white hover:bg-red-700"
               >
                 <svg
                   aria-hidden="true"
                   viewBox="0 0 24 24"
-                  className="h-4 w-4"
+                  className="h-3.5 w-3.5"
                   fill="none"
                   stroke="currentColor"
                   strokeWidth="2"

@@ -1,5 +1,6 @@
 import type { ProjectTask } from "../types/project";
 import { TableRow } from "./TableRow";
+import type { UserRole } from "../types/auth";
 
 export type SortDirection = "asc" | "desc";
 
@@ -23,6 +24,7 @@ export interface SortConfig {
 interface TableProps {
   tasks: ProjectTask[];
   sortConfig: SortConfig;
+  currentUserRole: UserRole;
   onSort: (key: SortKey) => void;
   onEdit: (task: ProjectTask) => void;
   onDelete: (task: ProjectTask) => void;
@@ -65,6 +67,7 @@ function SortIndicator({
 export function Table({
   tasks,
   sortConfig,
+  currentUserRole,
   onSort,
   onEdit,
   onDelete,
@@ -81,22 +84,25 @@ export function Table({
     tasks.some(
       (task) => canEditTask(task) || canDeleteTask(task) || canReplyTask(task),
     );
+  const commentsColumnWidth = currentUserRole === "user" ? "3%" : "11%";
+  const actionsColumnWidth = currentUserRole === "user" ? "8%" : "6%";
 
   return (
     <div className="overflow-hidden rounded-2xl border border-emerald-100 bg-white shadow-sm">
       <table className="w-full table-fixed text-justify text-sm">
         <colgroup>
-          <col style={{ width: "4%" }} />
+          <col style={{ width: "3%" }} />
           <col style={{ width: "7%" }} />
-          <col style={{ width: "19%" }} />
-          <col style={{ width: "21%" }} />
-          <col style={{ width: "9%" }} />
-          <col style={{ width: "7%" }} />
-          <col style={{ width: "7%" }} />
+          <col style={{ width: "14%" }} />
+          <col style={{ width: "15%" }} />
+          <col style={{ width: "8%" }} />
           <col style={{ width: "7%" }} />
           <col style={{ width: "7%" }} />
           <col style={{ width: "7%" }} />
           <col style={{ width: "7%" }} />
+          <col style={{ width: "7%" }} />
+          <col style={{ width: commentsColumnWidth }} />
+          {showActions && <col style={{ width: actionsColumnWidth }} />}
         </colgroup>
         <thead className="bg-emerald-50 text-gray-700">
           <tr>
@@ -122,8 +128,16 @@ export function Table({
                 </th>
               );
             })}
-            <th className="px-3 py-2 font-semibold">Comentários</th>
-            {showActions && <th className="px-3 py-2 font-semibold">Ações</th>}
+            <th
+              className={`py-2 font-semibold ${currentUserRole === "user" ? "px-1 text-center text-[11px] leading-tight whitespace-nowrap" : "px-3"}`}
+            >
+              Comentários
+            </th>
+            {showActions && (
+              <th className="px-1 py-2 text-center font-semibold whitespace-nowrap">
+                Ações
+              </th>
+            )}
           </tr>
         </thead>
         <tbody>
@@ -151,6 +165,7 @@ export function Table({
                 canReply={canReplyTask(task)}
                 canComment={canCommentTask}
                 showActions={showActions}
+                currentUserRole={currentUserRole}
               />
             ))
           )}

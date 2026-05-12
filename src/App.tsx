@@ -1263,7 +1263,7 @@ function App() {
 
   const exportScopeLabel =
     currentUser.role === "admin"
-      ? `Atividades de ${targetUser?.name ?? "usuário selecionado"}`
+      ? `Atividades de ${targetUser?.name ?? "Colaborador selecionado"}`
       : `Minhas atividades (${currentUser.name})`;
 
   return (
@@ -1324,6 +1324,7 @@ function App() {
         onComment={handleOpenCommentModal}
         onReply={handleOpenReplyModal}
         onMarkCommentRead={handleMarkCommentRead}
+        currentUserRole={currentUser.role}
         canEditTask={(task) => canEditTask(currentUser, task)}
         canDeleteTask={(task) => canDeleteTask(currentUser, task)}
         canReplyTask={(task) =>

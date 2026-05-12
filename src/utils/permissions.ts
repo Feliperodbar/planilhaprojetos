@@ -6,11 +6,19 @@ export function canCreateTask(user: SessionUser) {
 }
 
 export function canEditTask(user: SessionUser, task: ProjectTask) {
-  return user.role === "user" && task.ownerId === user.id;
+  if (user.role !== "user") {
+    return false;
+  }
+  // Usuário pode editar se é o dono OU se a tarefa não tem dono definido
+  return task.ownerId === user.id || !task.ownerId;
 }
 
 export function canDeleteTask(user: SessionUser, task: ProjectTask) {
-  return user.role === "user" && task.ownerId === user.id;
+  if (user.role !== "user") {
+    return false;
+  }
+  // Usuário pode deletar se é o dono OU se a tarefa não tem dono definido
+  return task.ownerId === user.id || !task.ownerId;
 }
 
 export function canCreateProjectOption(user: SessionUser) {
@@ -38,5 +46,6 @@ export function canViewTask(user: SessionUser, task: ProjectTask, targetUserId: 
     return task.ownerId === targetUserId;
   }
 
-  return task.ownerId === user.id;
+  // Usuário comum pode ver tarefas que ele criou ou tarefas órfãs (sem dono)
+  return task.ownerId === user.id || !task.ownerId;
 }

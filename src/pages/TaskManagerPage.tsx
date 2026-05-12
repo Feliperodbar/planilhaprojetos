@@ -9,6 +9,7 @@ import type {
   TaskStatus,
 } from "../types/project";
 import type { SessionUser } from "../types/auth";
+import type { UserRole } from "../types/auth";
 import neoHeaderLogo from "../assets/neoheader.svg";
 
 interface ToastState {
@@ -39,6 +40,7 @@ interface TaskManagerPageProps {
   activeFilterCount: number;
   filters: FilterState;
   sortConfig: SortConfig;
+  currentUserRole: UserRole;
   currentPage: number;
   totalPages: number;
   projetoOptions: string[];
@@ -153,6 +155,7 @@ export function TaskManagerPage({
   activeFilterCount,
   filters,
   sortConfig,
+  currentUserRole,
   currentPage,
   totalPages,
   projetoOptions,
@@ -357,6 +360,7 @@ export function TaskManagerPage({
       <Table
         tasks={tasks}
         sortConfig={sortConfig}
+        currentUserRole={currentUserRole}
         onSort={onSort}
         onEdit={onEdit}
         onDelete={onDelete}
