@@ -9,7 +9,6 @@ import { AuthGate } from "./components/AuthGate";
 import { ProjectOptionsModal } from "./components/ProjectOptionsModal";
 import { AdminCommentModal } from "./components/AdminCommentModal";
 import { UserReplyModal } from "./components/UserReplyModal";
-import neoHeaderLogo from "./assets/neoheader.svg";
 import type { ProjectTask, ProjectTaskInput } from "./types/project";
 import type { SessionState, SessionUser, UserAccount } from "./types/auth";
 import {
@@ -208,33 +207,6 @@ function createCommentId() {
   }
 
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-}
-
-async function loadImageDataUrl(src: string) {
-  const response = await fetch(src);
-  const svgText = await response.text();
-  const image = new Image();
-
-  return await new Promise<string>((resolve, reject) => {
-    image.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = image.naturalWidth;
-      canvas.height = image.naturalHeight;
-
-      const context = canvas.getContext("2d");
-      if (!context) {
-        reject(new Error("Não foi possível criar o contexto do canvas."));
-        return;
-      }
-
-      context.drawImage(image, 0, 0);
-      resolve(canvas.toDataURL("image/png"));
-    };
-
-    image.onerror = () =>
-      reject(new Error("Não foi possível carregar o logo."));
-    image.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgText)))}`;
-  });
 }
 
 function App() {
@@ -787,7 +759,7 @@ function App() {
     const worksheet = XLSX.utils.aoa_to_sheet([
       ["Gestão de Atividades"],
       [
-        `Neoenergia • ${filteredAndSortedTasks.length} registro(s) • Exportado em ${exportedAt}`,
+        `${filteredAndSortedTasks.length} registro(s) • Exportado em ${exportedAt}`,
       ],
       [],
       headers,
@@ -976,7 +948,6 @@ function App() {
         unit: "mm",
         format: "a4",
       });
-      const logoDataUrl = await loadImageDataUrl(neoHeaderLogo);
       const margin = 8;
       const headerHeight = 24;
       const pageWidth = doc.internal.pageSize.getWidth();
@@ -1049,8 +1020,6 @@ function App() {
           fillColor: [240, 253, 250],
         },
         didDrawPage: () => {
-          doc.addImage(logoDataUrl, "PNG", margin, margin - 1, 46, 11);
-
           doc.setFontSize(16);
           doc.setTextColor(15, 118, 110);
           doc.text("Gestão de Atividades", margin + 52, margin + 4);

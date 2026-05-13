@@ -352,6 +352,23 @@ export function FormModal({
             </select>
           </div>
         </form>
+
+        <div className="mt-4 flex gap-3 justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+          >
+            Cancelar
+          </button>
+          <button
+            form="activity-form"
+            type="submit"
+            className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+          >
+            {taskToEdit ? "Atualizar" : "Criar"}
+          </button>
+        </div>
       </div>
     </div>
   );

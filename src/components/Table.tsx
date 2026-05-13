@@ -129,12 +129,12 @@ export function Table({
               );
             })}
             <th
-              className={`py-2 font-semibold ${currentUserRole === "user" ? "px-1 text-center text-[11px] leading-tight whitespace-nowrap" : "px-3"}`}
+              className={`py-2 font-semibold ${currentUserRole === "user" ? "px-1 text-center text-[13px] leading-tight whitespace-nowrap" : "px-3"}`}
             >
               Comentários
             </th>
             {showActions && (
-              <th className="px-1 py-2 text-center font-semibold whitespace-nowrap">
+              <th className="px-2 py-2 text-center font-semibold whitespace-nowrap">
                 Ações
               </th>
             )}

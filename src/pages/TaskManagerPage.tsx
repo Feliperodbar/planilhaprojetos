@@ -10,7 +10,6 @@ import type {
 } from "../types/project";
 import type { SessionUser } from "../types/auth";
 import type { UserRole } from "../types/auth";
-import neoHeaderLogo from "../assets/neoheader.svg";
 
 interface ToastState {
   type: "success" | "error";
@@ -199,11 +198,6 @@ export function TaskManagerPage({
       <header className="mb-5 rounded-2xl border border-emerald-100 bg-white/90 p-4 shadow-sm backdrop-blur md:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <img
-              src={neoHeaderLogo}
-              alt="Neoenergia"
-              className="mb-1 h-10 w-auto md:h-10"
-            />
             <h1 className="text-xl font-bold text-gray-800">
               Gestão de Atividades
             </h1>
