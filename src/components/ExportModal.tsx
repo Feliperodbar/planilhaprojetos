@@ -2,7 +2,6 @@ interface ExportModalProps {
   isOpen: boolean;
   scopeLabel: string;
   onExcel: () => void;
-  onCsv: () => void;
   onPDF: () => void;
   onClose: () => void;
 }
@@ -11,7 +10,6 @@ export function ExportModal({
   isOpen,
   scopeLabel,
   onExcel,
-  onCsv,
   onPDF,
   onClose,
 }: ExportModalProps) {
@@ -21,19 +19,25 @@ export function ExportModal({
 
   return (
     <>
-      {/* Backdrop */}
       <div
-        className="fixed inset-0 z-40 bg-black/50"
+        className="fixed inset-0 z-40 bg-slate-950/55 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal */}
-      <div className="fixed left-1/2 top-1/2 z-50 w-full max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-lg border border-emerald-100 bg-white p-6 shadow-lg">
-        <h2 className="mb-1 text-lg font-bold text-gray-800">Exportar dados</h2>
-        <p className="mb-6 text-sm text-gray-600">
-          Escopo: <strong>{scopeLabel}</strong>. Escolha o formato desejado.
-        </p>
+      <div className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-white/60 bg-white/90 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.2)] backdrop-blur-xl sm:p-7">
+        <div className="mb-5 space-y-2">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
+            Exportação
+          </p>
+          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
+            Exportar dados
+          </h2>
+          <p className="text-sm leading-6 text-slate-600">
+            Escopo: <strong className="text-slate-900">{scopeLabel}</strong>.
+            Escolha o formato desejado.
+          </p>
+        </div>
 
         <div className="flex flex-col gap-3">
           <button
@@ -42,7 +46,7 @@ export function ExportModal({
               onExcel();
               onClose();
             }}
-            className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-left font-medium text-emerald-900 transition hover:bg-emerald-100"
+            className="group flex items-center gap-4 rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-white px-4 py-4 text-left font-medium text-emerald-950 transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
           >
             <svg
               className="h-5 w-5"
@@ -61,37 +65,13 @@ export function ExportModal({
           <button
             type="button"
             onClick={() => {
-              onCsv();
-              onClose();
-            }}
-            className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-left font-medium text-emerald-900 transition hover:bg-emerald-100"
-          >
-            <svg
-              className="h-5 w-5"
-              fill="currentColor"
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-            >
-              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" />
-            </svg>
-            <div>
-              <p className="font-semibold">CSV (.csv)</p>
-              <p className="text-xs text-emerald-700">
-                Valores separados por vírgula
-              </p>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
               onPDF();
               onClose();
             }}
-            className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-left font-medium text-emerald-900 transition hover:bg-emerald-100"
+            className="group flex items-center gap-4 rounded-2xl border border-sky-200 bg-gradient-to-r from-sky-50 to-white px-4 py-4 text-left font-medium text-sky-950 transition hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md"
           >
             <svg
-              className="h-5 w-5"
+              className="h-5 w-5 shrink-0 text-sky-700 transition group-hover:scale-110"
               fill="currentColor"
               viewBox="0 0 24 24"
               aria-hidden="true"
@@ -100,7 +80,7 @@ export function ExportModal({
             </svg>
             <div>
               <p className="font-semibold">PDF</p>
-              <p className="text-xs text-emerald-900">Documento portável</p>
+              <p className="text-xs text-sky-700">Documento portátil</p>
             </div>
           </button>
         </div>
@@ -108,7 +88,7 @@ export function ExportModal({
         <button
           type="button"
           onClick={onClose}
-          className="mt-6 w-full rounded-lg bg-gray-100 px-4 py-2 font-medium text-gray-800 transition hover:bg-gray-200"
+          className="mt-6 w-full rounded-full border border-slate-200 bg-slate-50 px-4 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-100"
         >
           Cancelar
         </button>

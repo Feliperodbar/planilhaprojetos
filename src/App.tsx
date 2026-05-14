@@ -675,56 +675,6 @@ function App() {
     return true;
   };
 
-  const handleExportCsv = () => {
-    if (!ensureExportPermission()) {
-      return;
-    }
-
-    if (filteredAndSortedTasks.length === 0) {
-      setToast({
-        type: "error",
-        message: "Não há dados para exportar com os filtros atuais.",
-      });
-      return;
-    }
-
-    const headers = [
-      "ID",
-      "Projeto",
-      "Atividade",
-      "Descrição",
-      "Responsável",
-      "Data início previsto",
-      "Data término previsto",
-      "Data início real",
-      "Data término real",
-      "Status",
-      "Comentários admin",
-      "Resposta do usuário",
-    ];
-
-    const rows = getExportRows();
-
-    const csvContent = [headers, ...rows]
-      .map((row) => row.map((cell) => escapeCsvValue(cell)).join(","))
-      .join("\r\n");
-
-    const blob = new Blob(["\uFEFF", csvContent], {
-      type: "text/csv;charset=utf-8;",
-    });
-    const downloadUrl = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-
-    anchor.href = downloadUrl;
-    anchor.download = `${exportFilename}.csv`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(downloadUrl);
-
-    setToast({ type: "success", message: "CSV exportado com sucesso." });
-  };
-
   const handleExportExcel = () => {
     if (!ensureExportPermission()) {
       return;
@@ -1285,7 +1235,6 @@ function App() {
         onCreate={handleCreate}
         onExport={() => setIsExportModalOpen(true)}
         onExportExcel={handleExportExcel}
-        onExportCsv={handleExportCsv}
         onExportPdf={handleExportPdf}
         onExportModalClose={() => setIsExportModalOpen(false)}
         onEdit={handleEdit}
