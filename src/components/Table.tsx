@@ -84,11 +84,13 @@ export function Table({
     tasks.some(
       (task) => canEditTask(task) || canDeleteTask(task) || canReplyTask(task),
     );
-  const commentsColumnWidth = currentUserRole === "user" ? "3%" : "11%";
+  const commentsColumnWidth = "10%";
   const actionsColumnWidth = currentUserRole === "user" ? "8%" : "6%";
 
   return (
-    <div className="overflow-x-auto overflow-y-visible rounded-2xl border border-emerald-100 bg-white shadow-sm">
+    <div
+      className={`${tasks.length === 0 ? "overflow-hidden" : "overflow-x-auto"} overflow-y-visible rounded-2xl border border-emerald-100 bg-white shadow-sm`}
+    >
       <table className="w-full table-fixed text-justify text-sm">
         <colgroup>
           <col style={{ width: "3%" }} />
@@ -128,9 +130,7 @@ export function Table({
                 </th>
               );
             })}
-            <th
-              className={`py-2 font-semibold ${currentUserRole === "user" ? "px-1 text-center text-[13px] leading-tight whitespace-nowrap" : "px-3"}`}
-            >
+            <th className="px-2 py-2 text-center font-semibold whitespace-normal break-words">
               Comentários
             </th>
             {showActions && (
