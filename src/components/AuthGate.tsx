@@ -9,7 +9,7 @@ interface AuthGateProps {
 
 export function AuthGate({ accounts, onLogin }: AuthGateProps) {
   const [accountId, setAccountId] = useState(accounts[0]?.id ?? "");
-  const [password, setPassword] = useState("");
+  const [password] = useState("123456");
   const [error, setError] = useState<string | null>(null);
 
   const selectedAccount = useMemo(() => {
@@ -30,7 +30,6 @@ export function AuthGate({ accounts, onLogin }: AuthGateProps) {
     }
 
     setError(null);
-    setPassword("");
     onLogin(selectedAccount);
   };
 
@@ -41,22 +40,18 @@ export function AuthGate({ accounts, onLogin }: AuthGateProps) {
         <div className="absolute -right-24 top-24 h-72 w-72 rounded-full bg-sky-300/20 blur-3xl" />
       </div>
 
-      <div className="relative mx-auto flex min-h-screen max-w-[1520px] flex-col gap-4">
-        <header className="rounded-[28px] border border-white/60 bg-white/75 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl md:p-7">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-slate-900">
-                Gerenciador de Tarefas
-              </h1>
-              <p className="text-sm text-slate-600">
-                Acesse sua conta para continuar
-              </p>
-            </div>
-          </div>
-        </header>
+      <main className="relative mx-auto flex min-h-screen max-w-[1520px] items-center justify-center">
+        <div className="flex w-full max-w-md flex-col gap-4">
+          <section className="rounded-[28px] border border-white/60 bg-white/75 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl md:p-7">
+            <h1 className="text-2xl font-semibold text-slate-900">
+              Gerenciador de Tarefas
+            </h1>
+            <p className="text-sm text-slate-600">
+              Acesse sua conta para continuar
+            </p>
+          </section>
 
-        <main className="flex flex-1 items-center justify-center">
-          <div className="w-full max-w-md rounded-[20px] border border-white/60 bg-white/75 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+          <section className="rounded-[20px] border border-white/60 bg-white/75 p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] backdrop-blur-xl">
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">
@@ -83,7 +78,7 @@ export function AuthGate({ accounts, onLogin }: AuthGateProps) {
                 <input
                   type="password"
                   value={password}
-                  onChange={(event) => setPassword(event.target.value)}
+                  readOnly
                   className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                   placeholder="Digite sua senha"
                 />
@@ -103,9 +98,9 @@ export function AuthGate({ accounts, onLogin }: AuthGateProps) {
                 Entrar
               </button>
             </form>
-          </div>
-        </main>
-      </div>
+          </section>
+        </div>
+      </main>
     </div>
   );
 }

@@ -37,6 +37,13 @@ const INITIAL_ACCOUNTS: UserAccount[] = [
     role: "user",
   },
   {
+    id: "user-usuario1",
+    name: "usuario1",
+    email: "usuario1@email.com",
+    password: "123456",
+    role: "user",
+  },
+  {
     id: "admin-felipe",
     name: "Felipeadm",
     email: "felipe@email.com",
@@ -100,12 +107,14 @@ function toSessionUser(account: UserAccount): SessionUser {
   };
 }
 
-function getNextId(tasks: ProjectTask[]) {
-  if (tasks.length === 0) {
+function getNextId(tasks: ProjectTask[], ownerId: string) {
+  const ownerTasks = tasks.filter((task) => task.ownerId === ownerId);
+
+  if (ownerTasks.length === 0) {
     return 1;
   }
 
-  return Math.max(...tasks.map((task) => task.id)) + 1;
+  return Math.max(...ownerTasks.map((task) => task.id)) + 1;
 }
 
 function normalizeForSort(value: string | number) {
@@ -566,7 +575,11 @@ function App() {
       return;
     }
 
-    setTasks((previous) => previous.filter((item) => item.id !== task.id));
+    setTasks((previous) =>
+      previous.filter(
+        (item) => item.id !== task.id || item.ownerId !== task.ownerId,
+      ),
+    );
     setToast({ type: "success", message: "Atividade excluída com sucesso." });
   };
 
@@ -604,7 +617,7 @@ function App() {
 
       setTasks((previous) =>
         previous.map((task) =>
-          task.id === taskToEdit.id
+          task.id === taskToEdit.id && task.ownerId === taskToEdit.ownerId
             ? {
                 ...task,
                 ...normalizedTaskData,
@@ -623,7 +636,7 @@ function App() {
     } else {
       setTasks((previous) => {
         const newTask: ProjectTask = {
-          id: getNextId(previous),
+          id: getNextId(previous, currentUser.id),
           ownerId: currentUser.id,
           ownerName: currentUser.name,
           adminComment: null,
