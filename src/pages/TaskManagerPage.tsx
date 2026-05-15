@@ -298,17 +298,21 @@ export function TaskManagerPage({
                 </p>
               </div>
 
-              <div className="min-w-64">
-                <label className="mb-1 block text-sm font-medium text-slate-700">
+              <div className="min-w-64 text-center">
+                <label className="mb-1 text-center block text-sm font-medium text-slate-700">
                   Usuário selecionado
                 </label>
                 <select
                   value={selectedUserId}
                   onChange={(event) => onUserChange(event.target.value)}
-                  className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-slate-900 shadow-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  className="w-[150px] rounded-2xl border border-slate-200 bg-white px-1 py-2 text-center text-slate-900 shadow-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
                 >
                   {userOptions.map((userOption) => (
-                    <option key={userOption.id} value={userOption.id}>
+                    <option
+                      className="text-center"
+                      key={userOption.id}
+                      value={userOption.id}
+                    >
                       {userOption.name}
                     </option>
                   ))}
