@@ -58,27 +58,16 @@ function SelectWithNew({
   required,
   error,
 }: SelectWithNewProps) {
-  const [isNew, setIsNew] = useState(false);
+  const [isCreatingNewOption, setIsCreatingNewOption] = useState(false);
 
   const cleanedOptions = useMemo(
     () => [...new Set(options.filter(Boolean).map((item) => item.trim()))],
     [options],
   );
 
-  useEffect(() => {
-    if (!value) {
-      // eslint-disable-next-line
-      setIsNew(false);
-      return;
-    }
-
-    if (!allowNewOption) {
-      setIsNew(false);
-      return;
-    }
-
-    setIsNew(!cleanedOptions.includes(value));
-  }, [allowNewOption, cleanedOptions, value]);
+  const isCustomValue =
+    allowNewOption && value !== "" && !cleanedOptions.includes(value);
+  const showNewInput = isCreatingNewOption || isCustomValue;
 
   return (
     <div>
@@ -86,7 +75,7 @@ function SelectWithNew({
         {label}
       </label>
       <select
-        value={isNew ? "__novo__" : value}
+        value={showNewInput ? "__novo__" : value}
         onChange={(event) => {
           if (!allowNewOption) {
             onChange(event.target.value);
@@ -94,12 +83,12 @@ function SelectWithNew({
           }
 
           if (event.target.value === "__novo__") {
-            setIsNew(true);
+            setIsCreatingNewOption(true);
             onChange("");
             return;
           }
 
-          setIsNew(false);
+          setIsCreatingNewOption(false);
           onChange(event.target.value);
         }}
         className="w-full rounded border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
@@ -113,7 +102,7 @@ function SelectWithNew({
         {allowNewOption && <option value="__novo__">+ Adicionar novo</option>}
       </select>
 
-      {isNew && (
+      {showNewInput && (
         <input
           type="text"
           value={value}
