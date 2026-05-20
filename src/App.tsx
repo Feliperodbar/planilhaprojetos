@@ -147,17 +147,6 @@ function formatDate(value: string) {
   return `${day}/${month}/${year}`;
 }
 
-function escapeCsvValue(value: string | number) {
-  const normalized = String(value ?? "");
-  const escaped = normalized.replace(/"/g, '""');
-
-  if (/[",\n\r]/.test(escaped)) {
-    return `"${escaped}"`;
-  }
-
-  return escaped;
-}
-
 function isTaskDelayed(task: ProjectTask, today: Date) {
   if (task.status === "Concluído" || !task.dataTerminoPrevisto) {
     return false;
