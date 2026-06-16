@@ -33,11 +33,11 @@ export function UserReplyModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-2 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl rounded-xl border border-emerald-100 bg-white p-5 shadow-lg"
+        className="mt-4 w-full max-w-xl rounded-t-3xl border border-emerald-100 bg-white p-4 shadow-lg sm:mt-0 sm:rounded-xl sm:p-5"
         onClick={(event) => event.stopPropagation()}
       >
         <h2 className="mb-1 text-xl font-semibold text-gray-800">
@@ -63,17 +63,17 @@ export function UserReplyModal({
             placeholder="Digite sua resposta para o administrador"
           />
 
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-100"
+              className="w-full rounded-lg border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-100 sm:w-auto"
             >
               Cancelar
             </button>
             <button
               type="submit"
-              className="rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700"
+              className="w-full rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700 sm:w-auto"
             >
               Salvar resposta
             </button>

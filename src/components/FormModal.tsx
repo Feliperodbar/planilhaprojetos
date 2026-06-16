@@ -182,11 +182,11 @@ export function FormModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-2 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-xl rounded-lg bg-white p-4 shadow-lg"
+        className="mt-4 w-full max-w-xl rounded-t-3xl bg-white p-4 shadow-lg sm:mt-0 sm:rounded-2xl sm:p-5"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-4">
@@ -197,22 +197,24 @@ export function FormModal({
 
         <form
           id="activity-form"
-          className="grid grid-cols-1 gap-3"
+          className="grid grid-cols-1 gap-3 sm:grid-cols-2"
           onSubmit={handleSubmit}
         >
-          <SelectWithNew
-            label="Projeto *"
-            value={formData.projeto}
-            onChange={(value) =>
-              setFormData((prev) => ({ ...prev, projeto: value }))
-            }
-            options={projetoOptions}
-            allowNewOption={allowNewProjectOption}
-            required
-            error={errors.projeto}
-          />
+          <div className="sm:col-span-2">
+            <SelectWithNew
+              label="Projeto *"
+              value={formData.projeto}
+              onChange={(value) =>
+                setFormData((prev) => ({ ...prev, projeto: value }))
+              }
+              options={projetoOptions}
+              allowNewOption={allowNewProjectOption}
+              required
+              error={errors.projeto}
+            />
+          </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-gray-700">
               Atividade *
             </label>
@@ -233,7 +235,7 @@ export function FormModal({
             )}
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-gray-700">
               Descrição
             </label>
@@ -342,18 +344,18 @@ export function FormModal({
           </div>
         </form>
 
-        <div className="mt-4 flex gap-3 justify-end">
+        <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="rounded border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50"
+            className="w-full rounded border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-50 sm:w-auto"
           >
             Cancelar
           </button>
           <button
             form="activity-form"
             type="submit"
-            className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+            className="w-full rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600 sm:w-auto"
           >
             {taskToEdit ? "Atualizar" : "Criar"}
           </button>

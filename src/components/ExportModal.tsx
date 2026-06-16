@@ -25,7 +25,7 @@ export function ExportModal({
         aria-hidden="true"
       />
 
-      <div className="fixed left-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 -translate-y-1/2 rounded-[28px] border border-white/60 bg-white/90 p-6 shadow-[0_24px_80px_rgba(15,23,42,0.2)] backdrop-blur-xl sm:p-7">
+      <div className="fixed left-1/2 top-4 z-50 max-h-[calc(100dvh-2rem)] w-[calc(100%-1rem)] max-w-md -translate-x-1/2 overflow-y-auto rounded-[28px] border border-white/60 bg-white/90 p-5 shadow-[0_24px_80px_rgba(15,23,42,0.2)] backdrop-blur-xl sm:top-1/2 sm:max-h-[90vh] sm:-translate-y-1/2 sm:w-[calc(100%-2rem)] sm:p-7">
         <div className="mb-5 space-y-2">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-700">
             Exportação

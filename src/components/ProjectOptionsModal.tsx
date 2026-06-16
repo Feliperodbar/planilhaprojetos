@@ -41,18 +41,21 @@ export function ProjectOptionsModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-2 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-lg rounded-xl border border-emerald-100 bg-white p-5 shadow-lg"
+        className="mt-4 w-full max-w-lg rounded-t-3xl border border-emerald-100 bg-white p-4 shadow-lg sm:mt-0 sm:rounded-xl sm:p-5"
         onClick={(event) => event.stopPropagation()}
       >
         <h2 className="mb-4 text-xl font-semibold text-gray-800">
           Gerenciar projetos
         </h2>
 
-        <form className="mb-4 flex gap-2" onSubmit={handleSubmit}>
+        <form
+          className="mb-4 flex flex-col gap-2 sm:flex-row"
+          onSubmit={handleSubmit}
+        >
           <input
             type="text"
             value={projectName}
@@ -62,7 +65,7 @@ export function ProjectOptionsModal({
           />
           <button
             type="submit"
-            className="rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700"
+            className="w-full rounded-lg bg-emerald-600 px-4 py-2 font-medium text-white hover:bg-emerald-700 sm:w-auto"
           >
             Adicionar
           </button>
@@ -75,13 +78,13 @@ export function ProjectOptionsModal({
             cleanedOptions.map((option) => (
               <div
                 key={option}
-                className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2"
+                className="flex flex-col gap-3 rounded-lg border border-gray-200 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
               >
                 <span className="text-sm text-gray-700">{option}</span>
                 <button
                   type="button"
                   onClick={() => onRemove(option)}
-                  className="rounded bg-red-600 px-2 py-1 text-xs font-medium text-white hover:bg-red-700"
+                  className="w-full rounded bg-red-600 px-2 py-2 text-xs font-medium text-white hover:bg-red-700 sm:w-auto sm:px-2 sm:py-1"
                 >
                   Remover
                 </button>

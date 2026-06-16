@@ -1,5 +1,5 @@
 import type { ProjectTask } from "../types/project";
-import { TableRow } from "./TableRow";
+import { TableRow, TaskCard } from "./TableRow";
 import type { UserRole } from "../types/auth";
 
 export type SortDirection = "asc" | "desc";
@@ -79,6 +79,7 @@ export function Table({
   canReplyTask,
   canCommentTask,
 }: TableProps) {
+  const isEmpty = tasks.length === 0;
   const showActions =
     canCommentTask ||
     tasks.some(
@@ -88,33 +89,76 @@ export function Table({
   const actionsColumnWidth = currentUserRole === "user" ? "8%" : "6%";
 
   return (
-    <div
-      className={`${tasks.length === 0 ? "overflow-hidden" : "overflow-x-auto"} overflow-y-visible rounded-2xl border border-emerald-100 bg-white shadow-sm`}
-    >
-      <table className="w-full table-fixed text-justify text-sm">
-        <colgroup>
-          <col style={{ width: "3%" }} />
-          <col style={{ width: "7%" }} />
-          <col style={{ width: "14%" }} />
-          <col style={{ width: "15%" }} />
-          <col style={{ width: "8%" }} />
-          <col style={{ width: "7%" }} />
-          <col style={{ width: "7%" }} />
-          <col style={{ width: "7%" }} />
-          <col style={{ width: "7%" }} />
-          <col style={{ width: "7%" }} />
-          <col style={{ width: commentsColumnWidth }} />
-          {showActions && <col style={{ width: actionsColumnWidth }} />}
-        </colgroup>
+    <div className="overflow-x-auto overflow-y-visible rounded-2xl border border-emerald-100 bg-white shadow-sm">
+      <div className="md:hidden">
+        {isEmpty ? (
+          <div className="p-4">
+            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-gray-500">
+              Nenhuma tarefa encontrada.
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3 p-3">
+            {tasks.map((task) => (
+              <TaskCard
+                key={task.id}
+                task={task}
+                onEdit={onEdit}
+                onDelete={onDelete}
+                onComment={onComment}
+                onReply={onReply}
+                onMarkCommentRead={onMarkCommentRead}
+                canEdit={canEditTask(task)}
+                canDelete={canDeleteTask(task)}
+                canReply={canReplyTask(task)}
+                canComment={canCommentTask}
+                showActions={showActions}
+                currentUserRole={currentUserRole}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <table
+        className={`hidden w-full text-justify text-sm md:table ${isEmpty ? "table-auto" : "table-fixed md:table-auto"}`}
+      >
+        {!isEmpty && (
+          <colgroup>
+            <col style={{ width: "3%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "15%" }} />
+            <col style={{ width: "8%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: "7%" }} />
+            <col style={{ width: commentsColumnWidth }} />
+            {showActions && <col style={{ width: actionsColumnWidth }} />}
+          </colgroup>
+        )}
         <thead className="bg-emerald-50 text-gray-700">
           <tr>
             {columns.map((column) => {
               const isActive = sortConfig.key === column.key;
+              const columnVisibility =
+                column.key === "id"
+                  ? "hidden sm:table-cell"
+                  : column.key === "descricao"
+                    ? "hidden md:table-cell"
+                    : column.key === "dataInicioPrevisto" ||
+                        column.key === "dataTerminoPrevisto" ||
+                        column.key === "dataInicioReal" ||
+                        column.key === "dataTerminoReal"
+                      ? "hidden lg:table-cell"
+                      : "";
 
               return (
                 <th
                   key={column.key}
-                  className="px-2 py-2 font-semibold align-top md:px-3"
+                  className={`px-2 py-2 font-semibold align-top md:px-3 ${columnVisibility}`}
                 >
                   <button
                     type="button"
@@ -130,7 +174,7 @@ export function Table({
                 </th>
               );
             })}
-            <th className="px-2 py-2 text-center font-semibold whitespace-normal break-words">
+            <th className="hidden md:table-cell px-2 py-2 text-center font-semibold whitespace-normal break-words">
               Comentários
             </th>
             {showActions && (
@@ -141,10 +185,10 @@ export function Table({
           </tr>
         </thead>
         <tbody>
-          {tasks.length === 0 ? (
+          {isEmpty ? (
             <tr>
               <td
-                className="px-3 py-6 text-center text-gray-500"
+                className="px-4 py-8 text-center text-sm text-gray-500 md:px-3 md:py-6"
                 colSpan={showActions ? 12 : 11}
               >
                 Nenhuma tarefa encontrada.
